@@ -1,0 +1,531 @@
+import asyncio
+import logging
+import os
+import re
+import uuid
+from contextlib import suppress
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import List, Optional
+
+import requests
+from dotenv import load_dotenv
+from fastapi import APIRouter, FastAPI, File, HTTPException, Request, Response, UploadFile
+from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel, Field
+from pymongo import ASCENDING, DESCENDING, IndexModel
+from starlette.middleware.cors import CORSMiddleware
+
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
+client = AsyncIOMotorClient(os.environ['MONGO_URL'])
+db = client[os.environ['DB_NAME']]
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+INDEXES = {
+    "categories": [IndexModel([("id", ASCENDING)], name="id", unique=True), IndexModel([("slug", ASCENDING)], name="slug")],
+    "products": [IndexModel([("id", ASCENDING)], name="id", unique=True), IndexModel([("category_id", ASCENDING)], name="cat"),
+                 IndexModel([("created_at", DESCENDING)], name="created_desc")],
+    "quotes": [IndexModel([("id", ASCENDING)], name="id", unique=True), IndexModel([("created_at", DESCENDING)], name="created_desc")],
+    "messages": [IndexModel([("id", ASCENDING)], name="id", unique=True), IndexModel([("created_at", DESCENDING)], name="created_desc")],
+    "users": [IndexModel([("email", ASCENDING)], name="email", unique=True)],
+    "user_sessions": [IndexModel([("session_token", ASCENDING)], name="token", unique=True)],
+    "files": [IndexModel([("storage_path", ASCENDING)], name="path")],
+    "meta": [IndexModel([("key", ASCENDING)], name="key", unique=True)],
+}
+
+
+async def ensure_indexes() -> None:
+    for collection, models in INDEXES.items():
+        for model in models:
+            try:
+                await db[collection].create_indexes([model])
+            except Exception as exc:
+                logger.error("ensure_indexes(%s.%s): %s", collection, model.document["name"], exc)
+
+
+app = FastAPI()
+api = APIRouter(prefix="/api")
+
+# ---------- Storage ----------
+STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+APP_NAME = "shabnam-elegant"
+storage_key = None
+
+
+def init_storage(force: bool = False):
+    global storage_key
+    if storage_key and not force:
+        return storage_key
+    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type},
+                        data=data, timeout=120)
+    if resp.status_code == 404:
+        key = init_storage(force=True)
+        resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type},
+                            data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_object(path: str):
+    key = init_storage()
+    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+# ---------- Helpers ----------
+def now_iso():
+    return datetime.now(timezone.utc).isoformat()
+
+
+TR_MAP = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+
+
+def slugify(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", text.translate(TR_MAP).lower()).strip("-") or uuid.uuid4().hex[:6]
+
+
+async def require_admin(request: Request) -> dict:
+    token = request.cookies.get("session_token")
+    auth = request.headers.get("Authorization", "")
+    if not token and auth.startswith("Bearer "):
+        token = auth[7:]
+    if not token:
+        raise HTTPException(401, "Giriş gerekli")
+    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
+    if not session:
+        raise HTTPException(401, "Oturum bulunamadı")
+    expires_at = session["expires_at"]
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(401, "Oturum süresi doldu")
+    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    if not user or not user.get("is_admin"):
+        raise HTTPException(403, "Yetkiniz yok")
+    return user
+
+
+async def email_allowed(email: str) -> bool:
+    env_list = [e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()]
+    if email in env_list:
+        return True
+    # first Google login claims ownership; afterwards only owner + listed admins
+    await db.meta.update_one({"key": "owner"}, {"$setOnInsert": {"key": "owner", "email": email, "created_at": now_iso()}}, upsert=True)
+    owner = await db.meta.find_one({"key": "owner"}, {"_id": 0})
+    extra = await db.meta.find_one({"key": "admins"}, {"_id": 0}) or {}
+    return email == owner["email"] or email in extra.get("emails", [])
+
+
+# ---------- Models ----------
+class CategoryIn(BaseModel):
+    name: str = Field(min_length=1)
+    description: str = ""
+    image: str = ""
+    accent: str = "#FF5722"
+    order: int = 0
+
+
+class ProductIn(BaseModel):
+    name: str = Field(min_length=1)
+    code: str = ""
+    category_id: str
+    summary: str = ""
+    description: str = ""
+    fabric: str = ""
+    weight: str = ""
+    features: List[str] = []
+    sizes: List[str] = []
+    colors: List[str] = []
+    images: List[str] = []
+    featured: bool = False
+    active: bool = True
+
+
+class QuoteIn(BaseModel):
+    name: str = Field(min_length=2)
+    company: str = ""
+    email: str = Field(min_length=5)
+    phone: str = Field(min_length=5)
+    product_id: str = ""
+    product_name: str = ""
+    quantity: int = 0
+    embroidery: bool = False
+    message: str = ""
+
+
+class MessageIn(BaseModel):
+    name: str = Field(min_length=2)
+    email: str = Field(min_length=5)
+    phone: str = ""
+    subject: str = ""
+    message: str = Field(min_length=2)
+
+
+class StatusIn(BaseModel):
+    status: str
+
+
+class SettingsIn(BaseModel):
+    company_name: str = "Shabnam Elegant"
+    tagline: str = ""
+    about: str = ""
+    phone: str = ""
+    email: str = ""
+    address: str = ""
+    whatsapp: str = ""
+    working_hours: str = ""
+    admin_emails: List[str] = []
+
+
+DEFAULT_SETTINGS = {
+    "company_name": "Shabnam Elegant",
+    "tagline": "İş elbisesi ve kurumsal üniforma üretimi",
+    "about": "Shabnam Elegant; iş elbisesi, tulum, yelek ve kurumsal üniformaları kendi atölyesinde üretir. [Firma hakkında kısa metin — yönetim panelinden güncelleyin]",
+    "phone": "[Telefon numarası]",
+    "email": "[E-posta adresi]",
+    "address": "[Fabrika / atölye adresi]",
+    "whatsapp": "",
+    "working_hours": "[Çalışma saatleri]",
+}
+
+
+# ---------- Auth ----------
+@api.post("/auth/session")
+async def auth_session(request: Request, response: Response):
+    sid = request.headers.get("X-Session-ID")
+    if not sid:
+        raise HTTPException(400, "session_id eksik")
+    r = await asyncio.to_thread(requests.get, "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                                headers={"X-Session-ID": sid}, timeout=20)
+    if r.status_code != 200:
+        raise HTTPException(401, "Google oturumu doğrulanamadı")
+    data = r.json()
+    email = data["email"].lower()
+    if not await email_allowed(email):
+        raise HTTPException(403, "Bu Google hesabının yönetim paneline erişim yetkisi yok.")
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    user_id = existing["user_id"] if existing else f"user_{uuid.uuid4().hex[:12]}"
+    await db.users.update_one({"email": email}, {"$set": {"name": data.get("name", ""), "picture": data.get("picture", ""), "is_admin": True},
+                                                 "$setOnInsert": {"user_id": user_id, "email": email, "created_at": now_iso()}}, upsert=True)
+    token = data["session_token"]
+    await db.user_sessions.insert_one({"user_id": user_id, "session_token": token,
+                                       "expires_at": datetime.now(timezone.utc) + timedelta(days=7), "created_at": now_iso()})
+    response.set_cookie("session_token", token, httponly=True, secure=True, samesite="none", path="/", max_age=7 * 24 * 3600)
+    return await db.users.find_one({"email": email}, {"_id": 0})
+
+
+@api.get("/auth/me")
+async def auth_me(request: Request):
+    return await require_admin(request)
+
+
+@api.post("/auth/logout")
+async def auth_logout(request: Request, response: Response):
+    token = request.cookies.get("session_token")
+    if token:
+        await db.user_sessions.delete_one({"session_token": token})
+    response.delete_cookie("session_token", path="/", secure=True, samesite="none")
+    return {"ok": True}
+
+
+# ---------- Files ----------
+@api.post("/upload")
+async def upload(request: Request, file: UploadFile = File(...)):
+    user = await require_admin(request)
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(400, "Sadece görsel dosyaları yüklenebilir")
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(400, "Dosya 10MB'dan büyük olamaz")
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "jpg"
+    path = f"{APP_NAME}/uploads/{user['user_id']}/{uuid.uuid4()}.{ext}"
+    result = await asyncio.to_thread(put_object, path, data, file.content_type)
+    await db.files.insert_one({"id": str(uuid.uuid4()), "storage_path": result["path"], "original_filename": file.filename,
+                               "content_type": file.content_type, "size": result.get("size", len(data)), "is_deleted": False,
+                               "created_at": now_iso()})
+    return {"url": f"/api/files/{result['path']}"}
+
+
+@api.get("/files/{path:path}")
+async def get_file(path: str):
+    record = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})
+    if not record:
+        raise HTTPException(404, "Dosya bulunamadı")
+    data, ctype = await asyncio.to_thread(get_object, path)
+    return Response(content=data, media_type=record.get("content_type") or ctype, headers={"Cache-Control": "public, max-age=31536000"})
+
+
+# ---------- Settings ----------
+@api.get("/settings")
+async def get_settings():
+    doc = await db.meta.find_one({"key": "settings"}, {"_id": 0, "key": 0}) or {}
+    return {**DEFAULT_SETTINGS, **doc}
+
+
+@api.put("/settings")
+async def put_settings(body: SettingsIn, request: Request):
+    await require_admin(request)
+    data = body.model_dump()
+    emails = [e.strip().lower() for e in data.pop("admin_emails") if e.strip()]
+    await db.meta.update_one({"key": "settings"}, {"$set": data}, upsert=True)
+    await db.meta.update_one({"key": "admins"}, {"$set": {"emails": emails}}, upsert=True)
+    return await get_settings()
+
+
+@api.get("/admin/admins")
+async def get_admins(request: Request):
+    await require_admin(request)
+    owner = await db.meta.find_one({"key": "owner"}, {"_id": 0}) or {}
+    extra = await db.meta.find_one({"key": "admins"}, {"_id": 0}) or {}
+    return {"owner": owner.get("email", ""), "emails": extra.get("emails", [])}
+
+
+# ---------- Categories ----------
+async def category_counts():
+    pipeline = [{"$match": {"active": True}}, {"$group": {"_id": "$category_id", "n": {"$sum": 1}}}]
+    return {d["_id"]: d["n"] async for d in db.products.aggregate(pipeline)}
+
+
+@api.get("/categories")
+async def list_categories():
+    cats = await db.categories.find({}, {"_id": 0}).sort([("order", 1), ("created_at", 1)]).to_list(200)
+    counts = await category_counts()
+    for c in cats:
+        c["product_count"] = counts.get(c["id"], 0)
+    return cats
+
+
+@api.post("/categories")
+async def create_category(body: CategoryIn, request: Request):
+    await require_admin(request)
+    doc = {"id": str(uuid.uuid4()), "slug": slugify(body.name), "created_at": now_iso(), **body.model_dump()}
+    await db.categories.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.put("/categories/{cid}")
+async def update_category(cid: str, body: CategoryIn, request: Request):
+    await require_admin(request)
+    res = await db.categories.update_one({"id": cid}, {"$set": {**body.model_dump(), "slug": slugify(body.name)}})
+    if not res.matched_count:
+        raise HTTPException(404, "Kategori bulunamadı")
+    return await db.categories.find_one({"id": cid}, {"_id": 0})
+
+
+@api.delete("/categories/{cid}")
+async def delete_category(cid: str, request: Request):
+    await require_admin(request)
+    if await db.products.count_documents({"category_id": cid}):
+        raise HTTPException(400, "Bu kategoride ürün var. Önce ürünleri taşıyın veya silin.")
+    await db.categories.delete_one({"id": cid})
+    return {"ok": True}
+
+
+# ---------- Products ----------
+async def attach_category(products: list) -> list:
+    cats = {c["id"]: c async for c in db.categories.find({}, {"_id": 0})}
+    for p in products:
+        c = cats.get(p.get("category_id"), {})
+        p["category"] = {"id": c.get("id", ""), "name": c.get("name", ""), "slug": c.get("slug", ""), "accent": c.get("accent", "#FF5722")}
+    return products
+
+
+@api.get("/products")
+async def list_products(request: Request, category: Optional[str] = None, q: Optional[str] = None,
+                        featured: Optional[bool] = None, all: bool = False):
+    query = {}
+    if all:
+        await require_admin(request)
+    else:
+        query["active"] = True
+    if category:
+        cat = await db.categories.find_one({"$or": [{"slug": category}, {"id": category}]}, {"_id": 0})
+        query["category_id"] = cat["id"] if cat else "__none__"
+    if q:
+        rx = {"$regex": re.escape(q), "$options": "i"}
+        query["$or"] = [{"name": rx}, {"code": rx}, {"summary": rx}]
+    if featured is not None:
+        query["featured"] = featured
+    items = await db.products.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return await attach_category(items)
+
+
+@api.get("/products/{pid}")
+async def get_product(pid: str):
+    p = await db.products.find_one({"id": pid, "active": True}, {"_id": 0})
+    if not p:
+        raise HTTPException(404, "Ürün bulunamadı")
+    return (await attach_category([p]))[0]
+
+
+@api.post("/products")
+async def create_product(body: ProductIn, request: Request):
+    await require_admin(request)
+    doc = {"id": str(uuid.uuid4()), "created_at": now_iso(), "updated_at": now_iso(), **body.model_dump()}
+    await db.products.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api.put("/products/{pid}")
+async def update_product(pid: str, body: ProductIn, request: Request):
+    await require_admin(request)
+    res = await db.products.update_one({"id": pid}, {"$set": {**body.model_dump(), "updated_at": now_iso()}})
+    if not res.matched_count:
+        raise HTTPException(404, "Ürün bulunamadı")
+    return await db.products.find_one({"id": pid}, {"_id": 0})
+
+
+@api.delete("/products/{pid}")
+async def delete_product(pid: str, request: Request):
+    await require_admin(request)
+    await db.products.delete_one({"id": pid})
+    return {"ok": True}
+
+
+# ---------- Quotes & Messages ----------
+@api.post("/quotes")
+async def create_quote(body: QuoteIn):
+    doc = {"id": str(uuid.uuid4()), "status": "yeni", "created_at": now_iso(), **body.model_dump()}
+    await db.quotes.insert_one(doc)
+    return {"ok": True, "id": doc["id"]}
+
+
+@api.get("/quotes")
+async def list_quotes(request: Request):
+    await require_admin(request)
+    return await db.quotes.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+
+@api.patch("/quotes/{qid}")
+async def update_quote(qid: str, body: StatusIn, request: Request):
+    await require_admin(request)
+    await db.quotes.update_one({"id": qid}, {"$set": {"status": body.status}})
+    return {"ok": True}
+
+
+@api.delete("/quotes/{qid}")
+async def delete_quote(qid: str, request: Request):
+    await require_admin(request)
+    await db.quotes.delete_one({"id": qid})
+    return {"ok": True}
+
+
+@api.post("/messages")
+async def create_message(body: MessageIn):
+    doc = {"id": str(uuid.uuid4()), "read": False, "created_at": now_iso(), **body.model_dump()}
+    await db.messages.insert_one(doc)
+    return {"ok": True, "id": doc["id"]}
+
+
+@api.get("/messages")
+async def list_messages(request: Request):
+    await require_admin(request)
+    return await db.messages.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+
+@api.patch("/messages/{mid}")
+async def read_message(mid: str, request: Request):
+    await require_admin(request)
+    await db.messages.update_one({"id": mid}, {"$set": {"read": True}})
+    return {"ok": True}
+
+
+@api.delete("/messages/{mid}")
+async def delete_message(mid: str, request: Request):
+    await require_admin(request)
+    await db.messages.delete_one({"id": mid})
+    return {"ok": True}
+
+
+@api.get("/admin/stats")
+async def admin_stats(request: Request):
+    await require_admin(request)
+    return {
+        "products": await db.products.count_documents({}),
+        "categories": await db.categories.count_documents({}),
+        "new_quotes": await db.quotes.count_documents({"status": "yeni"}),
+        "unread_messages": await db.messages.count_documents({"read": False}),
+    }
+
+
+# ---------- Seed ----------
+U = "https://images.unsplash.com/"
+Q = "?crop=entropy&cs=srgb&fm=jpg&q=80&w=1400"
+SEED_CATS = [
+    ("Yüksek Görünürlük", "Reflektörlü mont, ceket ve yelekler", U + "photo-1681812508281-7589b75b2e46" + Q, "#FF5722"),
+    ("İş Tulumları & Takımlar", "Fabrika, atölye ve saha için dayanıklı takımlar", U + "photo-1735494032948-14ef288fc9d3" + Q, "#3B82F6"),
+    ("İş Yelekleri", "Çok cepli, hafif ve görünür yelekler", U + "photo-1662309376159-b95fb193d96b" + Q, "#FACC15"),
+    ("Mutfak & Servis", "Aşçı ceketi, önlük ve servis üniformaları", U + "photo-1792950067048-3cae5982a423" + Q, "#10B981"),
+    ("Medikal Üniformalar", "Hastane ve klinikler için forma takımları", U + "photo-1594824476967-48c8b964273f" + Q, "#EC4899"),
+]
+SEED_PRODUCTS = [
+    (0, "Reflektörlü Saha Ceketi", "SE-101", "photo-1681812508281-7589b75b2e46", True),
+    (0, "Reflektörlü Kışlık Parka", "SE-102", "photo-1783410029012-a77854c6c27d", False),
+    (1, "Operatör İş Takımı", "SE-201", "photo-1735494032948-14ef288fc9d3", True),
+    (1, "Kurumsal İş Ceketi", "SE-202", "photo-1759692072000-e9c6edf6200f", False),
+    (2, "Çok Cepli Saha Yeleği", "SE-301", "photo-1622612023350-b15f063eabe6", True),
+    (2, "Fosforlu Ekip Yeleği", "SE-302", "photo-1652303518379-c0ef1c9fb2b1", False),
+    (3, "Klasik Aşçı Ceketi", "SE-401", "photo-1792950067048-3cae5982a423", True),
+    (4, "Medikal Forma Takımı", "SE-501", "photo-1594824476967-48c8b964273f", True),
+]
+
+
+async def seed():
+    if await db.categories.count_documents({}):
+        return
+    cat_ids = []
+    for i, (name, desc, img, accent) in enumerate(SEED_CATS):
+        cid = str(uuid.uuid4())
+        cat_ids.append(cid)
+        await db.categories.insert_one({"id": cid, "slug": slugify(name), "name": name, "description": desc, "image": img,
+                                        "accent": accent, "order": i, "created_at": now_iso()})
+    for ci, name, code, photo, featured in SEED_PRODUCTS:
+        await db.products.insert_one({
+            "id": str(uuid.uuid4()), "name": name, "code": code, "category_id": cat_ids[ci],
+            "summary": "Örnek ürün — bilgileri yönetim panelinden güncelleyin.",
+            "description": "Bu bir örnek üründür. Kumaş, gramaj, beden ve renk bilgilerini yönetim panelinden kendi ürününüze göre düzenleyin.",
+            "fabric": "[Kumaş bilgisi]", "weight": "[Gramaj]", "features": ["[Özellik 1]", "[Özellik 2]", "[Özellik 3]"],
+            "sizes": ["S", "M", "L", "XL", "XXL"], "colors": ["[Renk]"], "images": [U + photo + Q],
+            "featured": featured, "active": True, "created_at": now_iso(), "updated_at": now_iso()})
+
+
+app.include_router(api)
+app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+                   allow_methods=["*"], allow_headers=["*"])
+
+
+@app.on_event("startup")
+async def startup():
+    app.state.index_task = asyncio.create_task(ensure_indexes())
+    await seed()
+    try:
+        await asyncio.to_thread(init_storage)
+        logger.info("Storage initialized")
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    app.state.index_task.cancel()
+    with suppress(asyncio.CancelledError):
+        await app.state.index_task
+    client.close()

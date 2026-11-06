@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    background: #0B0F17;
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::selection { background: #FF5722; color: #fff; }
+
+.font-display { font-family: "Outfit", sans-serif; }
+.font-mono { font-family: "JetBrains Mono", monospace; }
+
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+.text-outline { color: transparent; -webkit-text-stroke: 2px #FACC15; }
+.text-outline-dark { color: transparent; -webkit-text-stroke: 2px #0B0F17; }
+@media (min-width: 768px) { .text-outline { -webkit-text-stroke-width: 3px; } }
+
+.hero-grid {
+    background-image: linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse at 30% 30%, #000 30%, transparent 75%);
+}
+
+.grain::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60; opacity: .05;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.clip-frame { clip-path: polygon(0 0, calc(100% - 64px) 0, 100% 64px, 100% 100%, 64px 100%, 0 calc(100% - 64px)); border-radius: 6px; }
+.clip-frame-sm { clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 0 100%); border-radius: 14px; }
+
+.spotlight::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .4s;
+    background: radial-gradient(380px circle at var(--x, 50%) var(--y, 50%), rgba(255,87,34,.18), transparent 60%);
+}
+.spotlight:hover::after { opacity: 1; }
+
+.tape-shine { background-image: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.85) 50%, transparent 70%); background-size: 250% 100%; animation: shine 4.5s ease-in-out infinite; background-color: rgba(250,204,21,.9); }
+@keyframes shine { 0% { background-position: 150% 0; } 60%, 100% { background-position: -100% 0; } }
+
+.marquee-track { animation: marquee 70s linear infinite; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .marquee-track, .tape-shine { animation: none; } }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@layer base {
+    :root {
+        --background: 222 35% 7%;
+        --foreground: 210 40% 96%;
+        --card: 220 30% 11%;
+        --card-foreground: 210 40% 96%;
+        --popover: 220 30% 11%;
+        --popover-foreground: 210 40% 96%;
+        --primary: 14 100% 57%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 220 25% 16%;
+        --secondary-foreground: 210 40% 96%;
+        --muted: 220 25% 16%;
+        --muted-foreground: 215 20% 70%;
+        --accent: 220 25% 16%;
+        --accent-foreground: 210 40% 96%;
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 0 0% 100% / 0.12;
+        --input: 0 0% 100% / 0.15;
+        --ring: 14 100% 57%;
+        --radius: 0.75rem;
+    }
+}
+
+@layer base {
+    * { @apply border-border; }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] { display: contents !important; }
+    [data-debug-wrapper="true"] > * {
+        margin-left: inherit; margin-right: inherit; margin-top: inherit; margin-bottom: inherit;
+        padding-left: inherit; padding-right: inherit; padding-top: inherit; padding-bottom: inherit;
+        column-gap: inherit; row-gap: inherit; gap: inherit;
+        border-left-width: inherit; border-right-width: inherit; border-top-width: inherit; border-bottom-width: inherit;
+        border-left-style: inherit; border-right-style: inherit; border-top-style: inherit; border-bottom-style: inherit;
+        border-left-color: inherit; border-right-color: inherit; border-top-color: inherit; border-bottom-color: inherit;
+    }
+}

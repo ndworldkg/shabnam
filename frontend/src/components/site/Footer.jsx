@@ -1,0 +1,48 @@
+import { Link } from "react-router-dom";
+import { Phone, Mail, MapPin, Clock } from "lucide-react";
+import { LogoMark } from "@/components/Logo";
+import { useSite } from "@/context/SettingsContext";
+
+export const Footer = () => {
+  const { settings, categories } = useSite();
+  const year = new Date().getFullYear();
+  const info = [
+    { icon: Phone, v: settings?.phone, id: "phone" },
+    { icon: Mail, v: settings?.email, id: "email" },
+    { icon: MapPin, v: settings?.address, id: "address" },
+    { icon: Clock, v: settings?.working_hours, id: "hours" },
+  ].filter((i) => i.v);
+  return (
+    <footer className="relative overflow-hidden border-t border-white/10 bg-[#07090F] pt-20" data-testid="site-footer">
+      <div className="mx-auto grid max-w-[1400px] gap-12 px-5 sm:px-8 md:grid-cols-12">
+        <div className="md:col-span-5">
+          <LogoMark className="h-12 w-12" />
+          <p className="mt-6 max-w-sm text-slate-400">{settings?.tagline}</p>
+        </div>
+        <div className="md:col-span-3">
+          <p className="mb-4 font-mono text-xs uppercase tracking-[0.25em] text-[#FACC15]">Kategoriler</p>
+          <ul className="space-y-2">
+            {categories.slice(0, 6).map((c) => (
+              <li key={c.id}><Link to={`/urunler?kategori=${c.slug}`} className="text-slate-300 transition-colors hover:text-white" data-testid={`footer-cat-${c.slug}`}>{c.name}</Link></li>
+            ))}
+          </ul>
+        </div>
+        <div className="md:col-span-4">
+          <p className="mb-4 font-mono text-xs uppercase tracking-[0.25em] text-[#FACC15]">İletişim</p>
+          <ul className="space-y-3">
+            {info.map(({ icon: I, v, id }) => (
+              <li key={id} className="flex gap-3 text-slate-300" data-testid={`footer-${id}`}><I className="mt-0.5 h-4 w-4 shrink-0 text-[#FF8A65]" />{v}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <p className="pointer-events-none mt-16 select-none whitespace-nowrap px-3 font-display text-[18vw] font-black uppercase leading-[0.8] tracking-tighter text-white/[0.05]">
+        {settings?.company_name || "Shabnam Elegant"}
+      </p>
+      <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-3 border-t border-white/10 px-5 py-6 text-xs text-slate-400 sm:flex-row sm:px-8">
+        <span>© {year} {settings?.company_name}. Tüm hakları saklıdır.</span>
+        <Link to="/admin" className="hover:text-white" data-testid="footer-admin-link">Yönetim Paneli</Link>
+      </div>
+    </footer>
+  );
+};
