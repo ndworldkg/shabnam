@@ -10,7 +10,7 @@ from typing import List, Optional
 
 import requests
 from dotenv import load_dotenv
-from fastapi import APIRouter, FastAPI, File, HTTPException, Request, Response, UploadFile
+from fastapi import APIRouter, BackgroundTasks, FastAPI, File, HTTPException, Request, Response, UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 from pymongo import ASCENDING, DESCENDING, IndexModel
@@ -18,6 +18,9 @@ from starlette.middleware.cors import CORSMiddleware
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+
+from email_service import send_email, quote_email_html  # noqa: E402
+from catalog_pdf import build_catalog  # noqa: E402
 
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
@@ -190,7 +193,12 @@ class SettingsIn(BaseModel):
     address: str = ""
     whatsapp: str = ""
     working_hours: str = ""
+    notification_email: str = ""
     admin_emails: List[str] = []
+
+
+class ReorderIn(BaseModel):
+    ids: List[str]
 
 
 DEFAULT_SETTINGS = {
@@ -202,6 +210,7 @@ DEFAULT_SETTINGS = {
     "address": "[Fabrika / atölye adresi]",
     "whatsapp": "",
     "working_hours": "[Çalışma saatleri]",
+    "notification_email": "",
 }
 
 
@@ -363,8 +372,27 @@ async def list_products(request: Request, category: Optional[str] = None, q: Opt
         query["$or"] = [{"name": rx}, {"code": rx}, {"summary": rx}]
     if featured is not None:
         query["featured"] = featured
-    items = await db.products.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    items = await db.products.find(query, {"_id": 0}).sort([("order", 1), ("created_at", -1)]).to_list(500)
     return await attach_category(items)
+
+
+@api.post("/products/reorder")
+async def reorder_products(body: ReorderIn, request: Request):
+    await require_admin(request)
+    for i, pid in enumerate(body.ids):
+        await db.products.update_one({"id": pid}, {"$set": {"order": i}})
+    return {"ok": True}
+
+
+@api.get("/catalog.pdf")
+async def catalog_pdf():
+    settings = await get_settings()
+    cats = await db.categories.find({}, {"_id": 0}).sort([("order", 1), ("created_at", 1)]).to_list(200)
+    items = await attach_category(await db.products.find({"active": True}, {"_id": 0}).sort([("order", 1), ("created_at", -1)]).to_list(500))
+    pdf = await asyncio.to_thread(build_catalog, settings, cats, items, lambda p: get_object(p)[0])
+    name = slugify(settings.get("company_name") or "katalog")
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{name}-katalog.pdf"'})
 
 
 @api.get("/products/{pid}")
@@ -378,7 +406,9 @@ async def get_product(pid: str):
 @api.post("/products")
 async def create_product(body: ProductIn, request: Request):
     await require_admin(request)
-    doc = {"id": str(uuid.uuid4()), "created_at": now_iso(), "updated_at": now_iso(), **body.model_dump()}
+    first = await db.products.find_one({}, {"_id": 0, "order": 1}, sort=[("order", 1)])
+    doc = {"id": str(uuid.uuid4()), "created_at": now_iso(), "updated_at": now_iso(), "order": (first or {}).get("order", 0) - 1,
+           **body.model_dump()}
     await db.products.insert_one(doc)
     doc.pop("_id", None)
     return doc
@@ -401,10 +431,31 @@ async def delete_product(pid: str, request: Request):
 
 
 # ---------- Quotes & Messages ----------
+QUOTE_HITS: dict = {}
+
+
+async def notify_quote(doc: dict):
+    settings = await get_settings()
+    owner = await db.meta.find_one({"key": "owner"}, {"_id": 0}) or {}
+    to = (settings.get("notification_email") or "").strip() or owner.get("email")
+    if not to:
+        return
+    subject = f"Yeni teklif talebi: {doc['name']}" + (f" — {doc['product_name']}" if doc.get("product_name") else "")
+    await send_email(to=to, subject=subject[:150], html=quote_email_html(doc), reply_to=doc["email"] if "@" in doc["email"] else None)
+
+
 @api.post("/quotes")
-async def create_quote(body: QuoteIn):
+async def create_quote(body: QuoteIn, request: Request, background: BackgroundTasks):
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "").split(",")[0].strip()
+    now = datetime.now(timezone.utc).timestamp()
+    hits = [t for t in QUOTE_HITS.get(ip, []) if now - t < 600]
+    if len(hits) >= 5:
+        raise HTTPException(429, "Çok fazla talep gönderildi, lütfen biraz sonra tekrar deneyin.")
+    QUOTE_HITS[ip] = hits + [now]
     doc = {"id": str(uuid.uuid4()), "status": "yeni", "created_at": now_iso(), **body.model_dump()}
     await db.quotes.insert_one(doc)
+    doc.pop("_id", None)
+    background.add_task(notify_quote, doc)
     return {"ok": True, "id": doc["id"]}
 
 
@@ -488,6 +539,12 @@ SEED_PRODUCTS = [
 ]
 
 
+async def migrate_order():
+    missing = await db.products.find({"order": {"$exists": False}}, {"_id": 0, "id": 1}).sort("created_at", -1).to_list(1000)
+    for i, p in enumerate(missing):
+        await db.products.update_one({"id": p["id"]}, {"$set": {"order": i}})
+
+
 async def seed():
     if await db.categories.count_documents({}):
         return
@@ -516,6 +573,7 @@ app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=os.envi
 async def startup():
     app.state.index_task = asyncio.create_task(ensure_indexes())
     await seed()
+    await migrate_order()
     try:
         await asyncio.to_thread(init_storage)
         logger.info("Storage initialized")

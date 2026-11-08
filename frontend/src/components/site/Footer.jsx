@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { LogoMark } from "@/components/Logo";
 import { useSite } from "@/context/SettingsContext";
+import { CatalogDownload } from "@/components/site/CatalogDownload";
 
 export const Footer = () => {
   const { settings, categories } = useSite();
@@ -18,6 +19,7 @@ export const Footer = () => {
         <div className="md:col-span-5">
           <LogoMark className="h-12 w-12" />
           <p className="mt-6 max-w-sm text-slate-400">{settings?.tagline}</p>
+          <CatalogDownload testid="footer-catalog-pdf" className="mt-8" />
         </div>
         <div className="md:col-span-3">
           <p className="mb-4 font-mono text-xs uppercase tracking-[0.25em] text-[#FACC15]">Kategoriler</p>

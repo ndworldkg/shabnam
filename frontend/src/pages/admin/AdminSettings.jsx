@@ -7,7 +7,8 @@ import { AdminTitle, AField, aInput, PrimaryBtn, toList } from "@/pages/admin/ui
 
 const FIELDS = [
   ["company_name", "Firma adı"], ["tagline", "Slogan / kısa tanım"], ["phone", "Telefon"], ["email", "E-posta"],
-  ["whatsapp", "WhatsApp numarası"], ["working_hours", "Çalışma saatleri"], ["address", "Adres", true], ["about", "Hakkımızda", true],
+  ["whatsapp", "WhatsApp numarası (ülke koduyla, örn. 90555...)"], ["working_hours", "Çalışma saatleri"],
+  ["notification_email", "Teklif bildirimlerinin gideceği e-posta (boşsa ana yönetici)"], ["address", "Adres", true], ["about", "Hakkımızda", true],
 ];
 
 export default function AdminSettings() {

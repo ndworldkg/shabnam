@@ -20,6 +20,12 @@ User choices: Firma adı "Shabnam elegant"; admin girişi Google ile; fotoğrafl
 - Admin: Google login, product CRUD + multi image upload (cover), category CRUD with image & accent color, quotes (status), messages (read), company settings + extra admin emails
 - Seed: 5 categories, 8 example products (placeholders in [brackets])
 
+## Implemented (2026-11-08)
+- Quote email alert (Emergent managed Resend) → settings.notification_email or owner email; background task; 5 quotes/10min per IP limit
+- PDF catalog: GET /api/catalog.pdf (reportlab, bundled Liberation Sans for Turkish), buttons on catalog page + footer
+- Floating WhatsApp button (shows when settings.whatsapp set)
+- Admin product ordering: drag & drop + up/down arrows (POST /api/products/reorder, `order` field)
+
 ## Backlog
 - P1: Email notification on new quote/message; product drag-sort; PDF catalog download
 - P2: Multi-language (EN/AR), SEO meta per product, WhatsApp floating button

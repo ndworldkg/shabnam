@@ -5,6 +5,7 @@ import { SettingsProvider } from "@/context/SettingsContext";
 import { SmoothScroll } from "@/components/site/SmoothScroll";
 import { Navbar } from "@/components/site/Navbar";
 import { Footer } from "@/components/site/Footer";
+import { WhatsAppButton } from "@/components/site/WhatsAppButton";
 import Home from "@/pages/Home";
 import Catalog from "@/pages/Catalog";
 import ProductDetail from "@/pages/ProductDetail";
@@ -18,6 +19,7 @@ const SiteLayout = () => (
     <Navbar />
     <Outlet />
     <Footer />
+    <WhatsAppButton />
   </div>
 );
 

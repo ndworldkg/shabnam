@@ -6,6 +6,7 @@ import { api, asList } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
 import { PageHeader } from "@/components/site/PageHeader";
 import { ProductCard } from "@/components/site/ProductCard";
+import { CatalogDownload } from "@/components/site/CatalogDownload";
 
 export default function Catalog() {
   const { categories } = useSite();
@@ -28,7 +29,9 @@ export default function Catalog() {
 
   return (
     <main data-testid="catalog-page">
-      <PageHeader eyebrow="Ürün Kataloğu" lines={["Tüm", "Koleksiyon"]} />
+      <PageHeader eyebrow="Ürün Kataloğu" lines={["Tüm", "Koleksiyon"]}>
+        <div className="mt-10"><CatalogDownload /></div>
+      </PageHeader>
       <div className="sticky top-[72px] z-30 border-b border-white/10 bg-[#0B0F17]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1400px] flex-col gap-4 px-5 py-4 sm:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
