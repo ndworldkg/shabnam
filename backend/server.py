@@ -21,6 +21,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 from email_service import send_email, quote_email_html  # noqa: E402
 from catalog_pdf import build_catalog  # noqa: E402
+from translator import localize, PRODUCT_KEYS, CATEGORY_KEYS, SETTINGS_KEYS  # noqa: E402
 
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
@@ -142,6 +143,7 @@ class CategoryIn(BaseModel):
     image: str = ""
     accent: str = "#FF5722"
     order: int = 0
+    i18n: dict = {}
 
 
 class ProductIn(BaseModel):
@@ -158,6 +160,7 @@ class ProductIn(BaseModel):
     images: List[str] = []
     featured: bool = False
     active: bool = True
+    i18n: dict = {}
 
 
 class QuoteIn(BaseModel):
@@ -195,6 +198,7 @@ class SettingsIn(BaseModel):
     working_hours: str = ""
     notification_email: str = ""
     admin_emails: List[str] = []
+    i18n: dict = {}
 
 
 class ReorderIn(BaseModel):
@@ -292,6 +296,7 @@ async def put_settings(body: SettingsIn, request: Request):
     await require_admin(request)
     data = body.model_dump()
     emails = [e.strip().lower() for e in data.pop("admin_emails") if e.strip()]
+    data["i18n"] = await localize(data, await get_settings(), SETTINGS_KEYS)
     await db.meta.update_one({"key": "settings"}, {"$set": data}, upsert=True)
     await db.meta.update_one({"key": "admins"}, {"$set": {"emails": emails}}, upsert=True)
     return await get_settings()
@@ -323,7 +328,9 @@ async def list_categories():
 @api.post("/categories")
 async def create_category(body: CategoryIn, request: Request):
     await require_admin(request)
-    doc = {"id": str(uuid.uuid4()), "slug": slugify(body.name), "created_at": now_iso(), **body.model_dump()}
+    data = body.model_dump()
+    data["i18n"] = await localize(data, None, CATEGORY_KEYS)
+    doc = {"id": str(uuid.uuid4()), "slug": slugify(body.name), "created_at": now_iso(), **data}
     await db.categories.insert_one(doc)
     doc.pop("_id", None)
     return doc
@@ -332,9 +339,12 @@ async def create_category(body: CategoryIn, request: Request):
 @api.put("/categories/{cid}")
 async def update_category(cid: str, body: CategoryIn, request: Request):
     await require_admin(request)
-    res = await db.categories.update_one({"id": cid}, {"$set": {**body.model_dump(), "slug": slugify(body.name)}})
-    if not res.matched_count:
+    old = await db.categories.find_one({"id": cid}, {"_id": 0})
+    if not old:
         raise HTTPException(404, "Kategori bulunamadı")
+    data = body.model_dump()
+    data["i18n"] = await localize(data, old, CATEGORY_KEYS)
+    await db.categories.update_one({"id": cid}, {"$set": {**data, "slug": slugify(body.name)}})
     return await db.categories.find_one({"id": cid}, {"_id": 0})
 
 
@@ -352,7 +362,8 @@ async def attach_category(products: list) -> list:
     cats = {c["id"]: c async for c in db.categories.find({}, {"_id": 0})}
     for p in products:
         c = cats.get(p.get("category_id"), {})
-        p["category"] = {"id": c.get("id", ""), "name": c.get("name", ""), "slug": c.get("slug", ""), "accent": c.get("accent", "#FF5722")}
+        p["category"] = {"id": c.get("id", ""), "name": c.get("name", ""), "slug": c.get("slug", ""), "accent": c.get("accent", "#FF5722"),
+                        "i18n": c.get("i18n", {})}
     return products
 
 
@@ -369,7 +380,7 @@ async def list_products(request: Request, category: Optional[str] = None, q: Opt
         query["category_id"] = cat["id"] if cat else "__none__"
     if q:
         rx = {"$regex": re.escape(q), "$options": "i"}
-        query["$or"] = [{"name": rx}, {"code": rx}, {"summary": rx}]
+        query["$or"] = [{"name": rx}, {"code": rx}, {"summary": rx}, {"i18n.ru.name": rx}, {"i18n.uz.name": rx}]
     if featured is not None:
         query["featured"] = featured
     items = await db.products.find(query, {"_id": 0}).sort([("order", 1), ("created_at", -1)]).to_list(500)
@@ -384,15 +395,31 @@ async def reorder_products(body: ReorderIn, request: Request):
     return {"ok": True}
 
 
+@api.post("/admin/translate-missing")
+async def translate_missing(request: Request):
+    await require_admin(request)
+    n = 0
+    for coll, keys in ((db.categories, CATEGORY_KEYS), (db.products, PRODUCT_KEYS)):
+        async for d in coll.find({}, {"_id": 0}):
+            i18n = await localize(d, d, keys)
+            if i18n != d.get("i18n"):
+                await coll.update_one({"id": d["id"]}, {"$set": {"i18n": i18n}})
+                n += 1
+    s = await get_settings()
+    await db.meta.update_one({"key": "settings"}, {"$set": {"i18n": await localize(s, s, SETTINGS_KEYS)}}, upsert=True)
+    return {"updated": n}
+
+
 @api.get("/catalog.pdf")
-async def catalog_pdf():
+async def catalog_pdf(lang: str = "ru"):
+    lang = lang if lang in ("ru", "uz") else "ru"
     settings = await get_settings()
     cats = await db.categories.find({}, {"_id": 0}).sort([("order", 1), ("created_at", 1)]).to_list(200)
     items = await attach_category(await db.products.find({"active": True}, {"_id": 0}).sort([("order", 1), ("created_at", -1)]).to_list(500))
-    pdf = await asyncio.to_thread(build_catalog, settings, cats, items, lambda p: get_object(p)[0])
-    name = slugify(settings.get("company_name") or "katalog")
+    pdf = await asyncio.to_thread(build_catalog, settings, cats, items, lambda p: get_object(p)[0], lang)
+    name = slugify(settings.get("company_name") or "catalog")
     return Response(content=pdf, media_type="application/pdf",
-                    headers={"Content-Disposition": f'attachment; filename="{name}-katalog.pdf"'})
+                    headers={"Content-Disposition": f'attachment; filename="{name}-catalog-{lang}.pdf"'})
 
 
 @api.get("/products/{pid}")
@@ -407,8 +434,10 @@ async def get_product(pid: str):
 async def create_product(body: ProductIn, request: Request):
     await require_admin(request)
     first = await db.products.find_one({}, {"_id": 0, "order": 1}, sort=[("order", 1)])
+    data = body.model_dump()
+    data["i18n"] = await localize(data, None, PRODUCT_KEYS)
     doc = {"id": str(uuid.uuid4()), "created_at": now_iso(), "updated_at": now_iso(), "order": (first or {}).get("order", 0) - 1,
-           **body.model_dump()}
+           **data}
     await db.products.insert_one(doc)
     doc.pop("_id", None)
     return doc
@@ -417,9 +446,12 @@ async def create_product(body: ProductIn, request: Request):
 @api.put("/products/{pid}")
 async def update_product(pid: str, body: ProductIn, request: Request):
     await require_admin(request)
-    res = await db.products.update_one({"id": pid}, {"$set": {**body.model_dump(), "updated_at": now_iso()}})
-    if not res.matched_count:
+    old = await db.products.find_one({"id": pid}, {"_id": 0})
+    if not old:
         raise HTTPException(404, "Ürün bulunamadı")
+    data = body.model_dump()
+    data["i18n"] = await localize(data, old, PRODUCT_KEYS)
+    await db.products.update_one({"id": pid}, {"$set": {**data, "updated_at": now_iso()}})
     return await db.products.find_one({"id": pid}, {"_id": 0})
 
 

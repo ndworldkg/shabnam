@@ -26,6 +26,12 @@ User choices: Firma adı "Shabnam elegant"; admin girişi Google ile; fotoğrafl
 - Floating WhatsApp button (shows when settings.whatsapp set)
 - Admin product ordering: drag & drop + up/down arrows (POST /api/products/reorder, `order` field)
 
+## Implemented (2026-11-09)
+- Site languages: Russian (default) + Uzbek Latin; Turkish removed from public site (admin panel stays Turkish). Switcher in navbar, saved in localStorage
+- UI strings in /app/frontend/src/i18n/dict.js; content via `i18n.{ru,uz}` on products/categories/settings, auto-translated on save with Claude Sonnet 5.5 (translator.py), admin can edit; manual edits kept unless Turkish source changes
+- "Eksik çevirileri tamamla" button → POST /api/admin/translate-missing
+- PDF catalog in selected language (?lang=ru|uz); quote email remains Turkish
+
 ## Backlog
 - P1: Email notification on new quote/message; product drag-sort; PDF catalog download
 - P2: Multi-language (EN/AR), SEO meta per product, WhatsApp floating button

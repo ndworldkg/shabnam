@@ -6,9 +6,16 @@ import { Switch } from "@/components/ui/switch";
 import { api, errMsg } from "@/lib/api";
 import { ImageUploader } from "@/pages/admin/ImageUploader";
 import { AField, aInput, PrimaryBtn, toList } from "@/pages/admin/ui";
+import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
+
+const TR_FIELDS = [
+  { k: "name", label: "Ürün adı", type: "text" }, { k: "fabric", label: "Kumaş", type: "text" }, { k: "weight", label: "Gramaj", type: "text" },
+  { k: "colors", label: "Renkler (virgülle)", type: "csv" }, { k: "summary", label: "Kısa açıklama", type: "textarea" },
+  { k: "description", label: "Detaylı açıklama", type: "textarea" }, { k: "features", label: "Özellikler (her satıra bir tane)", type: "lines" },
+];
 
 const blank = (cats) => ({ name: "", code: "", category_id: cats[0]?.id || "", summary: "", description: "", fabric: "", weight: "",
-  features: "", sizes: "S, M, L, XL, XXL", colors: "", images: [], featured: false, active: true });
+  features: "", sizes: "S, M, L, XL, XXL", colors: "", images: [], featured: false, active: true, i18n: {} });
 
 const toForm = (p) => ({ ...p, features: (p.features || []).join("\n"), sizes: (p.sizes || []).join(", "), colors: (p.colors || []).join(", ") });
 
@@ -27,7 +34,7 @@ export const ProductDialog = ({ open, onClose, product, categories, onSaved }) =
     if (!f.category_id) return toast.error("Önce bir kategori oluşturun.");
     setBusy(true);
     const body = { name: f.name, code: f.code, category_id: f.category_id, summary: f.summary, description: f.description, fabric: f.fabric,
-      weight: f.weight, features: toList(f.features), sizes: toList(f.sizes), colors: toList(f.colors), images: f.images, featured: f.featured, active: f.active };
+      weight: f.weight, features: toList(f.features), sizes: toList(f.sizes), colors: toList(f.colors), images: f.images, featured: f.featured, active: f.active, i18n: cleanI18n(f.i18n) };
     try {
       if (product) await api.put(`/products/${product.id}`, body);
       else await api.post("/products", body);
@@ -63,13 +70,14 @@ export const ProductDialog = ({ open, onClose, product, categories, onSaved }) =
           <AField label="Kısa açıklama" className="sm:col-span-2"><input className={aInput} value={f.summary} onChange={set("summary")} data-testid="product-summary-input" /></AField>
           <AField label="Detaylı açıklama" className="sm:col-span-2"><textarea rows={4} className={aInput} value={f.description} onChange={set("description")} data-testid="product-description-input" /></AField>
           <AField label="Özellikler (her satıra bir tane)" className="sm:col-span-2"><textarea rows={4} className={aInput} value={f.features} onChange={set("features")} data-testid="product-features-input" /></AField>
+          <TranslationFields value={f.i18n} onChange={(i18n) => setF({ ...f, i18n })} fields={TR_FIELDS} testid="product-i18n" />
           <div className="flex flex-wrap gap-8 sm:col-span-2">
             <label className="flex items-center gap-3 text-sm"><Switch checked={f.featured} onCheckedChange={(v) => setF({ ...f, featured: v })} data-testid="product-featured-switch" /> Ana sayfada öne çıkar</label>
             <label className="flex items-center gap-3 text-sm"><Switch checked={f.active} onCheckedChange={(v) => setF({ ...f, active: v })} data-testid="product-active-switch" /> Sitede yayında</label>
           </div>
           <div className="flex justify-end gap-3 sm:col-span-2">
             <button type="button" onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-slate-300 hover:text-white" data-testid="product-cancel-button">Vazgeç</button>
-            <PrimaryBtn type="submit" disabled={busy} data-testid="product-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Kaydet</PrimaryBtn>
+            <PrimaryBtn type="submit" disabled={busy} data-testid="product-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} {busy ? "Kaydediliyor ve çevriliyor..." : "Kaydet"}</PrimaryBtn>
           </div>
         </form>
       </DialogContent>

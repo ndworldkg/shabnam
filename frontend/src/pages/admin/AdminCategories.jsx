@@ -6,9 +6,12 @@ import { api, img, errMsg } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
 import { ImageUploader } from "@/pages/admin/ImageUploader";
 import { AdminTitle, AField, aInput, PrimaryBtn } from "@/pages/admin/ui";
+import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
+
+const TR_FIELDS = [{ k: "name", label: "Kategori adı", type: "text" }, { k: "description", label: "Açıklama", type: "text" }];
 
 const COLORS = ["#FF5722", "#FACC15", "#3B82F6", "#10B981", "#EC4899", "#A78BFA", "#F97316", "#22D3EE"];
-const BLANK = { name: "", description: "", image: "", accent: "#FF5722", order: 0 };
+const BLANK = { name: "", description: "", image: "", accent: "#FF5722", order: 0, i18n: {} };
 
 export default function AdminCategories({ onChange }) {
   const { categories, reload } = useSite();
@@ -19,15 +22,16 @@ export default function AdminCategories({ onChange }) {
 
   const openFor = (c) => {
     setEditId(c?.id || null);
-    setF(c ? { name: c.name, description: c.description, image: c.image, accent: c.accent, order: c.order } : { ...BLANK, order: categories.length });
+    setF(c ? { name: c.name, description: c.description, image: c.image, accent: c.accent, order: c.order, i18n: c.i18n || {} } : { ...BLANK, order: categories.length });
     setOpen(true);
   };
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
-      if (editId) await api.put(`/categories/${editId}`, { ...f, order: Number(f.order) || 0 });
-      else await api.post("/categories", { ...f, order: Number(f.order) || 0 });
+      const body = { ...f, order: Number(f.order) || 0, i18n: cleanI18n(f.i18n) };
+      if (editId) await api.put(`/categories/${editId}`, body);
+      else await api.post("/categories", body);
       toast.success("Kategori kaydedildi");
       setOpen(false);
       reload();
@@ -87,6 +91,7 @@ export default function AdminCategories({ onChange }) {
                 ))}
               </div>
             </AField>
+            <TranslationFields value={f.i18n} onChange={(i18n) => setF({ ...f, i18n })} fields={TR_FIELDS} testid="category-i18n" />
             <div className="flex justify-end"><PrimaryBtn type="submit" disabled={busy} data-testid="category-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Kaydet</PrimaryBtn></div>
           </form>
         </DialogContent>

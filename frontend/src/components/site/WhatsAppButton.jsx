@@ -1,13 +1,15 @@
 import { motion } from "framer-motion";
 import { useSite } from "@/context/SettingsContext";
+import { useLang } from "@/i18n/LangContext";
 
 export const WhatsAppButton = () => {
   const { settings } = useSite();
+  const { t } = useLang();
   const num = (settings?.whatsapp || "").replace(/\D/g, "");
   if (!num) return null;
-  const text = encodeURIComponent(`Merhaba ${settings?.company_name || ""}, ürünleriniz hakkında bilgi almak istiyorum.`);
+  const text = encodeURIComponent(t.wa.msg(settings?.company_name || ""));
   return (
-    <motion.a href={`https://wa.me/${num}?text=${text}`} target="_blank" rel="noreferrer" aria-label="WhatsApp ile yazın"
+    <motion.a href={`https://wa.me/${num}?text=${text}`} target="_blank" rel="noreferrer" aria-label={t.wa.label}
       initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 1.2, type: "spring", stiffness: 260, damping: 18 }}
       whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }} data-testid="whatsapp-float-button"
       className="group fixed bottom-5 right-5 z-[55] flex items-center gap-3 rounded-full bg-[#25D366] p-4 text-white shadow-[0_12px_40px_rgba(37,211,102,.45)] sm:bottom-8 sm:right-8">

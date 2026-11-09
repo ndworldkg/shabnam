@@ -19,6 +19,17 @@ DARK, ORANGE, YELLOW, GREY, LIGHT = HexColor("#0B0F17"), HexColor("#FF5722"), He
 W, H = A4
 M = 40
 
+L = {
+    "ru": {"title1": "КАТАЛОГ", "title2": "ПРОДУКЦИИ", "count": "товаров", "code": "Код",
+           "fabric": "Ткань", "weight": "Плотность", "sizes": "Размеры", "colors": "Цвета", "features": "Особенности"},
+    "uz": {"title1": "MAHSULOTLAR", "title2": "KATALOGI", "count": "ta mahsulot", "code": "Kod",
+           "fabric": "Mato", "weight": "Zichlik", "sizes": "O'lchamlar", "colors": "Ranglar", "features": "Xususiyatlar"},
+}
+
+
+def _loc(obj, key, lang):
+    return ((obj.get("i18n") or {}).get(lang) or {}).get(key) or obj.get(key)
+
 
 def _logo(c, x, y, s):
     c.setFillColor(DARK)
@@ -58,19 +69,20 @@ def _draw_cover_image(c, ir, x, y, w, h):
     c.restoreState()
 
 
-def _footer(c, settings, page):
+def _footer(c, settings, page, lang):
     c.setFillColor(DARK)
     c.rect(0, 0, W, 34, fill=1, stroke=0)
     c.setFillColor(YELLOW)
     c.rect(0, 34, W, 3, fill=1, stroke=0)
     c.setFont("Sans", 8.5)
     c.setFillColor(HexColor("#CBD5E1"))
-    info = "  ·  ".join(v for v in [settings.get("phone"), settings.get("email"), settings.get("address")] if v)
+    info = "  ·  ".join(v for v in [settings.get("phone"), settings.get("email"), _loc(settings, "address", lang)] if v)
     c.drawString(M, 13, info[:130])
     c.drawRightString(W - M, 13, str(page))
 
 
-def _cover(c, settings, count):
+def _cover(c, settings, count, lang):
+    t = L[lang]
     c.setFillColor(DARK)
     c.rect(0, 0, W, H, fill=1, stroke=0)
     _logo(c, M, H - M - 56, 56)
@@ -80,23 +92,25 @@ def _cover(c, settings, count):
     c.rect(0, 232, W, 7, fill=1, stroke=0)
     c.setFillColor(HexColor("#FFFFFF"))
     c.setFont("Sans-Bold", 44)
-    c.drawString(M, H / 2 + 70, "ÜRÜN")
+    c.drawString(M, H / 2 + 70, t["title1"])
     c.setFillColor(ORANGE)
-    c.drawString(M, H / 2 + 20, "KATALOĞU")
+    c.drawString(M, H / 2 + 20, t["title2"])
     c.setFillColor(HexColor("#FFFFFF"))
     c.setFont("Sans-Bold", 20)
     c.drawString(M, H / 2 - 30, settings.get("company_name") or "Shabnam Elegant")
     c.setFont("Sans", 12)
     c.setFillColor(HexColor("#CBD5E1"))
-    c.drawString(M, H / 2 - 52, settings.get("tagline") or "")
-    c.drawString(M, 120, f"{count} ürün")
-    info = [v for v in [settings.get("phone"), settings.get("email"), settings.get("address")] if v]
+    c.drawString(M, H / 2 - 52, _loc(settings, "tagline", lang) or "")
+    c.drawString(M, 120, f"{count} {t['count']}")
+    info = [v for v in [settings.get("phone"), settings.get("email"), _loc(settings, "address", lang)] if v]
     for i, v in enumerate(info):
         c.drawString(M, 96 - i * 16, v[:90])
     c.showPage()
 
 
-def _product(c, p, y, fetch_storage):
+def _product(c, p, y, fetch_storage, lang):
+    t = L[lang]
+    lo = lambda k: _loc(p, k, lang)  # noqa: E731
     box_h = 230
     c.setFillColor(LIGHT)
     c.roundRect(M, y - box_h, W - 2 * M, box_h, 10, fill=1, stroke=0)
@@ -109,26 +123,26 @@ def _product(c, p, y, fetch_storage):
     accent = HexColor(p.get("category", {}).get("accent") or "#FF5722")
     c.setFillColor(accent)
     c.setFont("Sans-Bold", 8)
-    c.drawString(tx, y - 28, (p.get("category", {}).get("name") or "").upper())
+    c.drawString(tx, y - 28, (_loc(p.get("category", {}), "name", lang) or "").upper())
     c.setFillColor(DARK)
     c.setFont("Sans-Bold", 17)
     ty = y - 48
-    for line in simpleSplit(p["name"], "Sans-Bold", 17, tw)[:2]:
+    for line in simpleSplit(lo("name"), "Sans-Bold", 17, tw)[:2]:
         c.drawString(tx, ty, line)
         ty -= 20
     if p.get("code"):
         c.setFont("Sans", 9)
         c.setFillColor(GREY)
-        c.drawString(tx, ty, f"Kod: {p['code']}")
+        c.drawString(tx, ty, f"{t['code']}: {p['code']}")
         ty -= 18
     c.setFont("Sans", 9.5)
     c.setFillColor(HexColor("#334155"))
-    for line in simpleSplit(p.get("summary") or "", "Sans", 9.5, tw)[:3]:
+    for line in simpleSplit(lo("summary") or "", "Sans", 9.5, tw)[:3]:
         c.drawString(tx, ty, line)
         ty -= 13
     ty -= 6
-    specs = [("Kumaş", p.get("fabric")), ("Gramaj", p.get("weight")), ("Bedenler", " · ".join(p.get("sizes") or [])),
-             ("Renkler", " · ".join(p.get("colors") or [])), ("Özellikler", " · ".join(p.get("features") or []))]
+    specs = [(t["fabric"], lo("fabric")), (t["weight"], lo("weight")), (t["sizes"], " · ".join(p.get("sizes") or [])),
+             (t["colors"], " · ".join(lo("colors") or [])), (t["features"], " · ".join(lo("features") or []))]
     for k, v in specs:
         if not v or ty < y - box_h + 16:
             continue
@@ -137,15 +151,15 @@ def _product(c, p, y, fetch_storage):
         c.drawString(tx, ty, k.upper())
         c.setFont("Sans", 9)
         c.setFillColor(DARK)
-        c.drawString(tx + 70, ty, simpleSplit(v, "Sans", 9, tw - 70)[0])
+        c.drawString(tx + 76, ty, simpleSplit(v, "Sans", 9, tw - 76)[0])
         ty -= 14
 
 
-def build_catalog(settings: dict, categories: list, products: list, fetch_storage) -> bytes:
+def build_catalog(settings: dict, categories: list, products: list, fetch_storage, lang: str = "ru") -> bytes:
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=A4)
-    c.setTitle(f"{settings.get('company_name', '')} Ürün Kataloğu")
-    _cover(c, settings, len(products))
+    c.setTitle(f"{settings.get('company_name', '')} — {L[lang]['title1']} {L[lang]['title2']}")
+    _cover(c, settings, len(products), lang)
     page = 2
     for cat in categories:
         items = [p for p in products if p.get("category_id") == cat["id"]]
@@ -156,12 +170,12 @@ def build_catalog(settings: dict, categories: list, products: list, fetch_storag
             c.rect(M, H - M - 6, 40, 6, fill=1, stroke=0)
             c.setFillColor(DARK)
             c.setFont("Sans-Bold", 22)
-            c.drawString(M, H - M - 34, cat["name"].upper())
+            c.drawString(M, H - M - 34, _loc(cat, "name", lang).upper())
             y = H - M - 56
             for p in items[i:i + 3]:
-                _product(c, p, y, fetch_storage)
+                _product(c, p, y, fetch_storage, lang)
                 y -= 245
-            _footer(c, settings, page)
+            _footer(c, settings, page, lang)
             c.showPage()
             page += 1
     c.save()

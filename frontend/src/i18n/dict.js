@@ -1,0 +1,81 @@
+export const LANGS = [
+  { code: "ru", label: "RU", name: "Русский" },
+  { code: "uz", label: "UZ", name: "O'zbekcha" },
+];
+
+export const DICT = {
+  ru: {
+    nav: { home: "Главная", products: "Продукция", quote: "Запрос цены", contact: "Контакты", quick: "Быстрый расчёт" },
+    hero: {
+      badge: "Производитель спецодежды",
+      lines: ["Носите", "силу", "труда."],
+      sub: "На стройке, на заводе, на кухне и в клинике — шьём прочную спецодежду и корпоративную униформу для вашей команды.",
+      catalog: "Смотреть каталог", quote: "Запросить цену", collection: "Коллекция", categories: "категорий",
+      alt: "Рабочая бригада в светоотражающих жилетах",
+    },
+    marquee: ["Спецодежда", "Комбинезоны", "Жилеты", "Униформа"],
+    bento: { eyebrow: "Категории продукции", t1: "Униформа", t2: "для каждой отрасли.", desc: "Выберите категорию, изучите модели и получите предложение для вашей команды за несколько шагов.", count: "товаров" },
+    featured: { eyebrow: "Избранное", t1: "Популярные", t2: "модели.", all: "Вся продукция" },
+    process: {
+      eyebrow: "Как мы работаем", t1: "От ткани", t2: "до отгрузки.",
+      steps: [
+        { t: "Запрос и расчёт", d: "Сообщите модель, количество и размерный ряд — подготовим персональное предложение." },
+        { t: "Образец и логотип", d: "Вместе согласуем ткань, цвет и нанесение логотипа." },
+        { t: "Производство", d: "Производство планируется и контролируется по утверждённому образцу." },
+        { t: "Доставка", d: "Изделия проверяются, упаковываются и доставляются вам." },
+      ],
+    },
+    cta: { title: "Предложение для вашей команды — в одной форме.", form: "Форма запроса", contact: "Связаться с нами" },
+    card: { product: "Товар" },
+    catalog: { eyebrow: "Каталог продукции", lines: ["Вся", "коллекция"], all: "Все", search: "Поиск по названию или коду", loading: "Загрузка...", count: "товаров", empty: "По заданным критериям товары не найдены.", pdf: "Скачать PDF-каталог" },
+    detail: { back: "Назад в каталог", code: "Код", fabric: "Ткань", weight: "Плотность", sizes: "Размеры", colors: "Цвета", quoteBtn: "Запросить цену на этот товар", formEyebrow: "Форма запроса", formTitle: "Узнайте цену: ", related: "Из этой же категории", notFound: "Товар не найден.", loading: "Загрузка..." },
+    quotePage: { eyebrow: "Запрос цены", lines: ["Для вашей", "команды"], notes: ["Укажите модель и количество", "Отметьте нанесение логотипа", "Мы ответим с индивидуальной ценой"] },
+    contactPage: { eyebrow: "Контакты", lines: ["Поговорим —", "и сошьём."], phone: "Телефон", email: "E-mail", address: "Адрес", hours: "Часы работы", whatsapp: "WhatsApp", sendTitle: "Напишите нам" },
+    form: {
+      name: "Имя и фамилия *", company: "Компания", email: "E-mail *", phone: "Телефон *", product: "Товар", general: "Общий запрос / несколько товаров",
+      qty: "Примерное количество", embroidery: "Нужна вышивка / печать логотипа", message: "Ваше сообщение", msgPh: "Размерный ряд, цвет, срок поставки...",
+      submit: "Запросить цену", success: "Запрос отправлен, спасибо.", toastOk: "Ваш запрос получен. Мы скоро свяжемся с вами.", toastErr: "Проверьте обязательные поля.",
+      phoneOpt: "Телефон", subject: "Тема", messageReq: "Сообщение *", send: "Отправить", contactOk: "Сообщение отправлено.", contactSuccess: "Сообщение получено, спасибо.", contactErr: "Не удалось отправить сообщение.",
+      tooMany: "Слишком много запросов, попробуйте немного позже.",
+    },
+    footer: { categories: "Категории", contact: "Контакты", rights: "Все права защищены.", admin: "Панель управления" },
+    wa: { label: "Написать в WhatsApp", msg: (n) => `Здравствуйте, ${n}! Хочу узнать подробнее о вашей продукции.` },
+  },
+  uz: {
+    nav: { home: "Bosh sahifa", products: "Mahsulotlar", quote: "Narx so'rash", contact: "Aloqa", quick: "Tezkor taklif" },
+    hero: {
+      badge: "Maxsus kiyim ishlab chiqaruvchisi",
+      lines: ["Mehnat", "kuchini", "kiying."],
+      sub: "Qurilishda, zavodda, oshxonada va klinikada — jamoangiz uchun bardoshli maxsus kiyim va korporativ formalar tikamiz.",
+      catalog: "Katalogni ko'rish", quote: "Narx so'rash", collection: "To'plam", categories: "kategoriya",
+      alt: "Nur qaytaruvchi nimcha kiygan ishchilar jamoasi",
+    },
+    marquee: ["Maxsus kiyim", "Kombinezon", "Nimcha", "Korporativ forma"],
+    bento: { eyebrow: "Mahsulot kategoriyalari", t1: "Har bir soha", t2: "uchun o'z formasi.", desc: "Kategoriyani tanlang, modellarni ko'rib chiqing va jamoangiz uchun taklifni bir necha qadamda oling.", count: "ta mahsulot" },
+    featured: { eyebrow: "Tanlanganlar", t1: "Ommabop", t2: "modellar.", all: "Barcha mahsulotlar" },
+    process: {
+      eyebrow: "Qanday ishlaymiz", t1: "Matodan", t2: "yetkazishgacha.",
+      steps: [
+        { t: "So'rov va taklif", d: "Model, miqdor va o'lchamlar taqsimotini yuboring — sizga maxsus taklif tayyorlaymiz." },
+        { t: "Namuna va logotip", d: "Mato, rang va logotip tushirishni birga kelishib olamiz." },
+        { t: "Ishlab chiqarish", d: "Tasdiqlangan namuna asosida ishlab chiqarish rejalashtiriladi va nazorat qilinadi." },
+        { t: "Yetkazib berish", d: "Mahsulotlar tekshirilib, qadoqlanadi va sizga yetkaziladi." },
+      ],
+    },
+    cta: { title: "Jamoangiz uchun taklif — bitta formada.", form: "So'rov formasi", contact: "Biz bilan bog'laning" },
+    card: { product: "Mahsulot" },
+    catalog: { eyebrow: "Mahsulotlar katalogi", lines: ["Butun", "to'plam"], all: "Barchasi", search: "Nomi yoki kodi bo'yicha qidirish", loading: "Yuklanmoqda...", count: "ta mahsulot", empty: "Ushbu mezonlarga mos mahsulot topilmadi.", pdf: "PDF katalogni yuklab olish" },
+    detail: { back: "Katalogga qaytish", code: "Kod", fabric: "Mato", weight: "Zichlik", sizes: "O'lchamlar", colors: "Ranglar", quoteBtn: "Ushbu mahsulot narxini so'rash", formEyebrow: "So'rov formasi", formTitle: "Narxini bilib oling: ", related: "Shu kategoriyadan", notFound: "Mahsulot topilmadi.", loading: "Yuklanmoqda..." },
+    quotePage: { eyebrow: "Narx so'rash", lines: ["Jamoangiz", "uchun taklif"], notes: ["Model va miqdorni yozing", "Logotip tushirishni belgilang", "Sizga maxsus narx bilan javob beramiz"] },
+    contactPage: { eyebrow: "Aloqa", lines: ["Gaplashamiz,", "tikamiz."], phone: "Telefon", email: "E-pochta", address: "Manzil", hours: "Ish vaqti", whatsapp: "WhatsApp", sendTitle: "Bizga yozing" },
+    form: {
+      name: "Ism va familiya *", company: "Kompaniya", email: "E-pochta *", phone: "Telefon *", product: "Mahsulot", general: "Umumiy so'rov / bir nechta mahsulot",
+      qty: "Taxminiy miqdor", embroidery: "Logotip kashtasi / bosma kerak", message: "Xabaringiz", msgPh: "O'lchamlar, rang, yetkazish muddati...",
+      submit: "Narx so'rash", success: "So'rovingiz yuborildi, rahmat.", toastOk: "So'rovingiz qabul qilindi. Tez orada bog'lanamiz.", toastErr: "Majburiy maydonlarni tekshiring.",
+      phoneOpt: "Telefon", subject: "Mavzu", messageReq: "Xabar *", send: "Yuborish", contactOk: "Xabaringiz yuborildi.", contactSuccess: "Xabaringiz qabul qilindi, rahmat.", contactErr: "Xabarni yuborib bo'lmadi.",
+      tooMany: "So'rovlar juda ko'p, birozdan so'ng qayta urinib ko'ring.",
+    },
+    footer: { categories: "Kategoriyalar", contact: "Aloqa", rights: "Barcha huquqlar himoyalangan.", admin: "Boshqaruv paneli" },
+    wa: { label: "WhatsApp orqali yozish", msg: (n) => `Assalomu alaykum, ${n}! Mahsulotlaringiz haqida ma'lumot olmoqchiman.` },
+  },
+};

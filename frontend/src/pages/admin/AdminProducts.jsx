@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, ImageOff, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, ImageOff, GripVertical, ChevronUp, ChevronDown, Languages, Loader2 } from "lucide-react";
 import { api, asList, img, errMsg } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
 import { ProductDialog } from "@/pages/admin/ProductDialog";
@@ -13,6 +13,20 @@ export default function AdminProducts({ onChange }) {
   const [edit, setEdit] = useState(null);
   const [open, setOpen] = useState(false);
   const [dragId, setDragId] = useState(null);
+  const [translating, setTranslating] = useState(false);
+
+  const translateAll = async () => {
+    setTranslating(true);
+    try {
+      const r = await api.post("/admin/translate-missing");
+      toast.success(`Çeviriler tamamlandı (${r.data?.updated ?? 0} kayıt)`);
+      refresh();
+    } catch (e) {
+      toast.error(errMsg(e, "Çeviri yapılamadı"));
+    } finally {
+      setTranslating(false);
+    }
+  };
 
   const load = () => api.get("/products", { params: { all: true } }).then((r) => setItems(asList(r.data))).catch(() => setItems([]));
   useEffect(() => {
@@ -55,7 +69,13 @@ export default function AdminProducts({ onChange }) {
   return (
     <div data-testid="admin-products">
       <AdminTitle title="Ürünler" sub={`${items.length} ürün · Sıralamak için sürükleyip bırakın veya okları kullanın`}
-        action={<PrimaryBtn onClick={() => { setEdit(null); setOpen(true); }} data-testid="admin-add-product-button"><Plus className="h-4 w-4" /> Yeni Ürün</PrimaryBtn>} />
+        action={<div className="flex flex-wrap gap-2">
+          <button onClick={translateAll} disabled={translating} data-testid="admin-translate-missing-button"
+            className="inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2.5 text-sm text-slate-200 hover:border-[#FACC15] disabled:opacity-60">
+            {translating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Languages className="h-4 w-4" />} Eksik çevirileri tamamla
+          </button>
+          <PrimaryBtn onClick={() => { setEdit(null); setOpen(true); }} data-testid="admin-add-product-button"><Plus className="h-4 w-4" /> Yeni Ürün</PrimaryBtn>
+        </div>} />
       <div className="relative mb-6 max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ürün ara" className="w-full rounded-lg border border-white/15 bg-white/5 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#FF5722]" data-testid="admin-product-search" />

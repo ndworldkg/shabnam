@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation, Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { LangProvider } from "@/i18n/LangContext";
 import { SmoothScroll } from "@/components/site/SmoothScroll";
 import { Navbar } from "@/components/site/Navbar";
 import { Footer } from "@/components/site/Footer";
@@ -43,6 +44,7 @@ function AppRouter() {
 
 function App() {
   return (
+    <LangProvider>
     <SettingsProvider>
       <BrowserRouter>
         <SmoothScroll />
@@ -50,6 +52,7 @@ function App() {
         <Toaster theme="dark" position="bottom-right" richColors />
       </BrowserRouter>
     </SettingsProvider>
+    </LangProvider>
   );
 }
 

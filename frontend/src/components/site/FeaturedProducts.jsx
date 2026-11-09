@@ -4,9 +4,12 @@ import { ArrowRight } from "lucide-react";
 import { api, asList } from "@/lib/api";
 import { Reveal, Eyebrow } from "@/components/site/Reveal";
 import { ProductCard } from "@/components/site/ProductCard";
+import { useLang } from "@/i18n/LangContext";
 
 export const FeaturedProducts = () => {
   const [items, setItems] = useState([]);
+  const { t } = useLang();
+  const f = t.featured;
   useEffect(() => {
     api.get("/products", { params: { featured: true } }).then((r) => setItems(asList(r.data))).catch(() => setItems([]));
   }, []);
@@ -16,14 +19,14 @@ export const FeaturedProducts = () => {
       <div className="mx-auto max-w-[1400px] px-5 sm:px-8">
         <div className="mb-14 flex flex-col justify-between gap-6 md:flex-row md:items-end">
           <Reveal>
-            <Eyebrow color="#60A5FA">Öne Çıkanlar</Eyebrow>
+            <Eyebrow color="#60A5FA">{f.eyebrow}</Eyebrow>
             <h2 className="font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Öne çıkan<br />modeller.
+              {f.t1}<br />{f.t2}
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
             <Link to="/urunler" data-testid="featured-all-link" className="group inline-flex items-center gap-3 font-semibold text-white">
-              <span className="border-b border-white/30 pb-1 transition-colors group-hover:border-[#FF5722]">Tüm ürünler</span>
+              <span className="border-b border-white/30 pb-1 transition-colors group-hover:border-[#FF5722]">{f.all}</span>
               <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </Reveal>

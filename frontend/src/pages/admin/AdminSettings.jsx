@@ -4,6 +4,12 @@ import { Loader2 } from "lucide-react";
 import { api, errMsg } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
 import { AdminTitle, AField, aInput, PrimaryBtn, toList } from "@/pages/admin/ui";
+import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
+
+const TR_FIELDS = [
+  { k: "tagline", label: "Slogan", type: "text" }, { k: "working_hours", label: "Çalışma saatleri", type: "text" },
+  { k: "address", label: "Adres", type: "textarea" }, { k: "about", label: "Hakkımızda", type: "textarea" },
+];
 
 const FIELDS = [
   ["company_name", "Firma adı"], ["tagline", "Slogan / kısa tanım"], ["phone", "Telefon"], ["email", "E-posta"],
@@ -29,7 +35,7 @@ export default function AdminSettings() {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.put("/settings", { ...f, admin_emails: toList(admins) });
+      await api.put("/settings", { ...f, i18n: cleanI18n(f?.i18n), admin_emails: toList(admins) });
       toast.success("Firma bilgileri güncellendi");
       reload();
     } catch (err) {
@@ -53,6 +59,7 @@ export default function AdminSettings() {
           <input className={aInput} value={admins} onChange={(e) => setAdmins(e.target.value)} placeholder="ornek@gmail.com" data-testid="settings-admin-emails-input" />
           <span className="mt-1.5 block text-xs text-slate-400">Ana yönetici: {owner || "-"}</span>
         </AField>
+        <TranslationFields value={f?.i18n || {}} onChange={(i18n) => setF({ ...f, i18n })} fields={TR_FIELDS} testid="settings-i18n" />
         <div className="sm:col-span-2"><PrimaryBtn type="submit" disabled={busy} data-testid="settings-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Kaydet</PrimaryBtn></div>
       </form>
     </div>

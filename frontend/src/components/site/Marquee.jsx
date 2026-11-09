@@ -1,10 +1,10 @@
 import { useSite } from "@/context/SettingsContext";
-
-const FALLBACK = ["İş Elbiseleri", "Tulum & Takım", "Yelek", "Kurumsal Üniforma"];
+import { useLang } from "@/i18n/LangContext";
 
 export const Marquee = () => {
   const { categories } = useSite();
-  const words = categories.length ? categories.map((c) => c.name) : FALLBACK;
+  const { t, loc } = useLang();
+  const words = categories.length ? categories.map((c) => loc(c, "name")) : t.marquee;
   const row = [...words, ...words];
   return (
     <section className="relative overflow-hidden border-y border-white/10 bg-[#FF5722] py-6 md:py-8" data-testid="editorial-marquee">
