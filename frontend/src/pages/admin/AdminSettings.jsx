@@ -5,6 +5,7 @@ import { api, errMsg } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
 import { AdminTitle, AField, aInput, PrimaryBtn, toList } from "@/pages/admin/ui";
 import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
+import { TelegramSettings } from "@/pages/admin/TelegramSettings";
 
 const TR_FIELDS = [
   { k: "tagline", label: "Slogan", type: "text" }, { k: "working_hours", label: "Çalışma saatleri", type: "text" },
@@ -59,6 +60,7 @@ export default function AdminSettings() {
           <input className={aInput} value={admins} onChange={(e) => setAdmins(e.target.value)} placeholder="ornek@gmail.com" data-testid="settings-admin-emails-input" />
           <span className="mt-1.5 block text-xs text-slate-400">Ana yönetici: {owner || "-"}</span>
         </AField>
+        <TelegramSettings value={f?.telegram_chat_id} onChange={(v) => setF({ ...f, telegram_chat_id: v })} />
         <TranslationFields value={f?.i18n || {}} onChange={(i18n) => setF({ ...f, i18n })} fields={TR_FIELDS} testid="settings-i18n" />
         <div className="sm:col-span-2"><PrimaryBtn type="submit" disabled={busy} data-testid="settings-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Kaydet</PrimaryBtn></div>
       </form>

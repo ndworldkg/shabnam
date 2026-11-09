@@ -29,9 +29,9 @@ export default function AuthCallback() {
       {error ? (
         <>
           <p className="max-w-md text-lg" data-testid="auth-error">{error}</p>
-          <Link to="/" className="text-[#FF8A65] underline" data-testid="auth-error-home-link">Siteye dön</Link>
+          <Link to="/" className="text-[#F7B267] underline" data-testid="auth-error-home-link">Siteye dön</Link>
         </>
-      ) : <Loader2 className="h-8 w-8 animate-spin text-[#FF5722]" />}
+      ) : <Loader2 className="h-8 w-8 animate-spin text-[#F2962B]" />}
     </main>
   );
 }

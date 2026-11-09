@@ -15,15 +15,17 @@ FONT_DIR = Path(__file__).parent / "fonts"
 pdfmetrics.registerFont(TTFont("Sans", str(FONT_DIR / "LiberationSans-Regular.ttf")))
 pdfmetrics.registerFont(TTFont("Sans-Bold", str(FONT_DIR / "LiberationSans-Bold.ttf")))
 
-DARK, ORANGE, YELLOW, GREY, LIGHT = HexColor("#0B0F17"), HexColor("#FF5722"), HexColor("#FACC15"), HexColor("#64748B"), HexColor("#F4F4F5")
+DARK, ORANGE, YELLOW, GREY, LIGHT = HexColor("#0B0F17"), HexColor("#F2962B"), HexColor("#FACC15"), HexColor("#64748B"), HexColor("#F4F4F5")
 W, H = A4
 M = 40
 
 L = {
     "ru": {"title1": "КАТАЛОГ", "title2": "ПРОДУКЦИИ", "count": "товаров", "code": "Код",
-           "fabric": "Ткань", "weight": "Плотность", "sizes": "Размеры", "colors": "Цвета", "features": "Особенности"},
+           "fabric": "Ткань", "weight": "Плотность", "sizes": "Размеры", "colors": "Цвета", "features": "Особенности",
+           "price": lambda n: f"от {n} сум"},
     "uz": {"title1": "MAHSULOTLAR", "title2": "KATALOGI", "count": "ta mahsulot", "code": "Kod",
-           "fabric": "Mato", "weight": "Zichlik", "sizes": "O'lchamlar", "colors": "Ranglar", "features": "Xususiyatlar"},
+           "fabric": "Mato", "weight": "Zichlik", "sizes": "O'lchamlar", "colors": "Ranglar", "features": "Xususiyatlar",
+           "price": lambda n: f"{n} so'mdan"},
 }
 
 
@@ -32,17 +34,7 @@ def _loc(obj, key, lang):
 
 
 def _logo(c, x, y, s):
-    c.setFillColor(DARK)
-    c.roundRect(x, y, s, s, s * 0.23, fill=1, stroke=0)
-    k = s / 48
-    p = c.beginPath()
-    for i, (px, py) in enumerate([(9, 11), (18, 11), (24, 18), (30, 11), (39, 11), (24, 28)]):
-        (p.moveTo if i == 0 else p.lineTo)(x + px * k, y + s - py * k)
-    p.close()
-    c.setFillColor(ORANGE)
-    c.drawPath(p, fill=1, stroke=0)
-    c.setFillColor(YELLOW)
-    c.rect(x + 9 * k, y + s - 36 * k, 30 * k, 5 * k, fill=1, stroke=0)
+    c.drawImage(str(Path(__file__).parent / "assets" / "logo-mark.png"), x, y, width=s * 1.44, height=s, mask="auto")
 
 
 def _image(url, fetch_storage):
@@ -120,7 +112,7 @@ def _product(c, p, y, fetch_storage, lang):
         _draw_cover_image(c, ir, M + 10, y - box_h + 10, img_w, box_h - 20)
     tx = M + img_w + 30
     tw = W - M - tx - 14
-    accent = HexColor(p.get("category", {}).get("accent") or "#FF5722")
+    accent = HexColor(p.get("category", {}).get("accent") or "#F2962B")
     c.setFillColor(accent)
     c.setFont("Sans-Bold", 8)
     c.drawString(tx, y - 28, (_loc(p.get("category", {}), "name", lang) or "").upper())
@@ -134,6 +126,11 @@ def _product(c, p, y, fetch_storage, lang):
         c.setFont("Sans", 9)
         c.setFillColor(GREY)
         c.drawString(tx, ty, f"{t['code']}: {p['code']}")
+        ty -= 18
+    if p.get("show_price") and p.get("price_from"):
+        c.setFont("Sans-Bold", 12)
+        c.setFillColor(ORANGE)
+        c.drawString(tx, ty, t["price"](f"{int(p['price_from']):,}".replace(",", " ")))
         ty -= 18
     c.setFont("Sans", 9.5)
     c.setFillColor(HexColor("#334155"))
@@ -166,7 +163,7 @@ def build_catalog(settings: dict, categories: list, products: list, fetch_storag
         if not items:
             continue
         for i in range(0, len(items), 3):
-            c.setFillColor(HexColor(cat.get("accent") or "#FF5722"))
+            c.setFillColor(HexColor(cat.get("accent") or "#F2962B"))
             c.rect(M, H - M - 6, 40, 6, fill=1, stroke=0)
             c.setFillColor(DARK)
             c.setFont("Sans-Bold", 22)

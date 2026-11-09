@@ -6,7 +6,7 @@ import { EASE } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
 import { useLang } from "@/i18n/LangContext";
 
-const LINE_CLS = ["text-white", "text-[#FF5722]", "text-outline"];
+const LINE_CLS = ["text-white", "text-[#F2962B]", "text-outline"];
 const HERO_IMG = "https://images.unsplash.com/photo-1652303518379-c0ef1c9fb2b1?crop=entropy&cs=srgb&fm=jpg&q=85&w=1400";
 
 const Tilt = ({ children }) => {
@@ -57,7 +57,7 @@ export const Hero = () => {
             <p className="text-base text-slate-300 md:text-lg">{h.sub}</p>
             <div className="flex flex-wrap gap-3">
               <Link to="/urunler" data-testid="hero-catalog-btn"
-                className="group inline-flex items-center gap-3 rounded-full bg-[#FF5722] px-7 py-4 font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-1 hover:bg-[#ff6a3d]">
+                className="group inline-flex items-center gap-3 rounded-full bg-[#F2962B] px-7 py-4 font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-1 hover:bg-[#F5A94E]">
                 {h.catalog} <ArrowDownRight className="h-5 w-5 transition-transform duration-300 group-hover:-rotate-45" />
               </Link>
               <Link to="/teklif" data-testid="hero-quote-btn"

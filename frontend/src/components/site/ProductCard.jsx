@@ -2,10 +2,11 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, ImageOff } from "lucide-react";
 import { img } from "@/lib/api";
 import { useLang } from "@/i18n/LangContext";
+import { Price } from "@/components/site/Price";
 
 export const ProductCard = ({ p }) => {
   const { t, loc } = useLang();
-  const accent = p?.category?.accent || "#FF5722";
+  const accent = p?.category?.accent || "#F2962B";
   const onMove = (e) => {
     const r = e.currentTarget.getBoundingClientRect();
     e.currentTarget.style.setProperty("--x", `${e.clientX - r.left}px`);
@@ -28,8 +29,9 @@ export const ProductCard = ({ p }) => {
         <div>
           {p.code && <p className="font-mono text-xs uppercase tracking-[0.2em] text-slate-400">{p.code}</p>}
           <h3 className="mt-1 font-display text-xl font-bold leading-tight text-white">{loc(p, "name")}</h3>
+          <Price p={p} className="mt-2 font-display text-base font-bold text-[#FACC15]" />
         </div>
-        <span className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 text-white transition-[background-color,transform] duration-500 group-hover:rotate-45 group-hover:bg-[#FF5722]">
+        <span className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 text-white transition-[background-color,transform] duration-500 group-hover:rotate-45 group-hover:bg-[#F2962B]">
           <ArrowUpRight className="h-4 w-4" />
         </span>
       </div>

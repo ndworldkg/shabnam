@@ -1,7 +1,7 @@
 import { Reveal, Eyebrow } from "@/components/site/Reveal";
 import { useLang } from "@/i18n/LangContext";
 
-const COLORS = ["#FF5722", "#FACC15", "#60A5FA", "#34D399"];
+const COLORS = ["#F2962B", "#FACC15", "#60A5FA", "#34D399"];
 
 export const Process = () => {
   const { t } = useLang();

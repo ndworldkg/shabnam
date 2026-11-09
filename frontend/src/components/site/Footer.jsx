@@ -19,7 +19,7 @@ export const Footer = () => {
     <footer className="relative overflow-hidden border-t border-white/10 bg-[#07090F] pt-20" data-testid="site-footer">
       <div className="mx-auto grid max-w-[1400px] gap-12 px-5 sm:px-8 md:grid-cols-12">
         <div className="md:col-span-5">
-          <LogoMark className="h-12 w-12" />
+          <LogoMark className="h-14 w-auto" />
           <p className="mt-6 max-w-sm text-slate-400">{loc(settings, "tagline")}</p>
           <CatalogDownload testid="footer-catalog-pdf" className="mt-8" />
         </div>
@@ -35,7 +35,7 @@ export const Footer = () => {
           <p className="mb-4 font-mono text-xs uppercase tracking-[0.25em] text-[#FACC15]">{t.footer.contact}</p>
           <ul className="space-y-3">
             {info.map(({ icon: I, v, id }) => (
-              <li key={id} className="flex gap-3 text-slate-300" data-testid={`footer-${id}`}><I className="mt-0.5 h-4 w-4 shrink-0 text-[#FF8A65]" />{v}</li>
+              <li key={id} className="flex gap-3 text-slate-300" data-testid={`footer-${id}`}><I className="mt-0.5 h-4 w-4 shrink-0 text-[#F7B267]" />{v}</li>
             ))}
           </ul>
         </div>

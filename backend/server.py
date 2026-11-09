@@ -22,6 +22,7 @@ load_dotenv(ROOT_DIR / '.env')
 from email_service import send_email, quote_email_html  # noqa: E402
 from catalog_pdf import build_catalog  # noqa: E402
 from translator import localize, PRODUCT_KEYS, CATEGORY_KEYS, SETTINGS_KEYS  # noqa: E402
+from telegram_service import send_telegram, recent_chats, quote_telegram_text  # noqa: E402
 
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
@@ -141,7 +142,7 @@ class CategoryIn(BaseModel):
     name: str = Field(min_length=1)
     description: str = ""
     image: str = ""
-    accent: str = "#FF5722"
+    accent: str = "#F2962B"
     order: int = 0
     i18n: dict = {}
 
@@ -160,6 +161,8 @@ class ProductIn(BaseModel):
     images: List[str] = []
     featured: bool = False
     active: bool = True
+    price_from: Optional[float] = Field(default=None, ge=0)
+    show_price: bool = False
     i18n: dict = {}
 
 
@@ -197,6 +200,7 @@ class SettingsIn(BaseModel):
     whatsapp: str = ""
     working_hours: str = ""
     notification_email: str = ""
+    telegram_chat_id: str = ""
     admin_emails: List[str] = []
     i18n: dict = {}
 
@@ -215,6 +219,7 @@ DEFAULT_SETTINGS = {
     "whatsapp": "",
     "working_hours": "[Çalışma saatleri]",
     "notification_email": "",
+    "telegram_chat_id": "",
 }
 
 
@@ -302,6 +307,33 @@ async def put_settings(body: SettingsIn, request: Request):
     return await get_settings()
 
 
+@api.get("/admin/telegram/chats")
+async def telegram_chats(request: Request):
+    await require_admin(request)
+    if not os.environ.get("TELEGRAM_BOT_TOKEN"):
+        raise HTTPException(400, "Telegram bot anahtarı henüz eklenmedi.")
+    try:
+        return await recent_chats()
+    except Exception as e:
+        raise HTTPException(400, f"Telegram: {e}")
+
+
+class TelegramTestIn(BaseModel):
+    chat_id: str = Field(min_length=1)
+
+
+@api.post("/admin/telegram/test")
+async def telegram_test(body: TelegramTestIn, request: Request):
+    await require_admin(request)
+    if not os.environ.get("TELEGRAM_BOT_TOKEN"):
+        raise HTTPException(400, "Telegram bot anahtarı henüz eklenmedi.")
+    settings = await get_settings()
+    ok = await send_telegram(body.chat_id.strip(), f"✅ <b>{settings.get('company_name')}</b> — Telegram bildirimleri başarıyla bağlandı.")
+    if not ok:
+        raise HTTPException(400, "Mesaj gönderilemedi. Chat ID'yi ve botun bu sohbete ekli olduğunu kontrol edin.")
+    return {"ok": True}
+
+
 @api.get("/admin/admins")
 async def get_admins(request: Request):
     await require_admin(request)
@@ -362,7 +394,7 @@ async def attach_category(products: list) -> list:
     cats = {c["id"]: c async for c in db.categories.find({}, {"_id": 0})}
     for p in products:
         c = cats.get(p.get("category_id"), {})
-        p["category"] = {"id": c.get("id", ""), "name": c.get("name", ""), "slug": c.get("slug", ""), "accent": c.get("accent", "#FF5722"),
+        p["category"] = {"id": c.get("id", ""), "name": c.get("name", ""), "slug": c.get("slug", ""), "accent": c.get("accent", "#F2962B"),
                         "i18n": c.get("i18n", {})}
     return products
 
@@ -468,6 +500,9 @@ QUOTE_HITS: dict = {}
 
 async def notify_quote(doc: dict):
     settings = await get_settings()
+    chat_id = (settings.get("telegram_chat_id") or "").strip()
+    if chat_id and os.environ.get("TELEGRAM_BOT_TOKEN"):
+        await send_telegram(chat_id, quote_telegram_text(doc, settings.get("company_name") or ""))
     owner = await db.meta.find_one({"key": "owner"}, {"_id": 0}) or {}
     to = (settings.get("notification_email") or "").strip() or owner.get("email")
     if not to:
@@ -553,7 +588,7 @@ async def admin_stats(request: Request):
 U = "https://images.unsplash.com/"
 Q = "?crop=entropy&cs=srgb&fm=jpg&q=80&w=1400"
 SEED_CATS = [
-    ("Yüksek Görünürlük", "Reflektörlü mont, ceket ve yelekler", U + "photo-1681812508281-7589b75b2e46" + Q, "#FF5722"),
+    ("Yüksek Görünürlük", "Reflektörlü mont, ceket ve yelekler", U + "photo-1681812508281-7589b75b2e46" + Q, "#F2962B"),
     ("İş Tulumları & Takımlar", "Fabrika, atölye ve saha için dayanıklı takımlar", U + "photo-1735494032948-14ef288fc9d3" + Q, "#3B82F6"),
     ("İş Yelekleri", "Çok cepli, hafif ve görünür yelekler", U + "photo-1662309376159-b95fb193d96b" + Q, "#FACC15"),
     ("Mutfak & Servis", "Aşçı ceketi, önlük ve servis üniformaları", U + "photo-1792950067048-3cae5982a423" + Q, "#10B981"),

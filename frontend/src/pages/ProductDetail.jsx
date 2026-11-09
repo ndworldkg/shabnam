@@ -7,6 +7,7 @@ import { Reveal, Eyebrow } from "@/components/site/Reveal";
 import { QuoteForm } from "@/components/site/QuoteForm";
 import { ProductCard } from "@/components/site/ProductCard";
 import { useLang } from "@/i18n/LangContext";
+import { Price } from "@/components/site/Price";
 
 const Gallery = ({ images, name }) => {
   const [i, setI] = useState(0);
@@ -23,7 +24,7 @@ const Gallery = ({ images, name }) => {
         <div className="mt-4 flex gap-3 overflow-x-auto">
           {list.map((u, k) => (
             <button key={u} onClick={() => setI(k)} data-testid={`product-thumb-${k}`}
-              className={`h-20 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors ${k === i ? "border-[#FF5722]" : "border-transparent opacity-60 hover:opacity-100"}`}>
+              className={`h-20 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-colors ${k === i ? "border-[#F2962B]" : "border-transparent opacity-60 hover:opacity-100"}`}>
               <img src={img(u)} alt="" className="h-full w-full object-cover" />
             </button>
           ))}
@@ -58,21 +59,22 @@ export default function ProductDetail() {
     }).then((r) => setRelated(asList(r?.data).filter((x) => x.id !== id).slice(0, 4))).catch(() => setMissing(true));
   }, [id]);
 
-  if (missing) return <main className="flex min-h-screen flex-col items-center justify-center gap-6 pt-20 text-white" data-testid="product-not-found"><p className="text-xl">{D.notFound}</p><Link to="/urunler" className="text-[#FF8A65] underline">{D.back}</Link></main>;
+  if (missing) return <main className="flex min-h-screen flex-col items-center justify-center gap-6 pt-20 text-white" data-testid="product-not-found"><p className="text-xl">{D.notFound}</p><Link to="/urunler" className="text-[#F7B267] underline">{D.back}</Link></main>;
   if (!p) return <main className="min-h-screen pt-40 text-center text-slate-400">{D.loading}</main>;
   const name = loc(p, "name");
-  const accent = p.category?.accent || "#FF5722";
+  const accent = p.category?.accent || "#F2962B";
 
   return (
     <main className="pt-[72px]" data-testid="product-detail-page">
       <section className="mx-auto max-w-[1400px] px-5 py-12 sm:px-8 md:py-16">
         <Link to="/urunler" className="mb-10 inline-flex items-center gap-2 text-sm text-slate-300 hover:text-white" data-testid="product-back-link"><ArrowLeft className="h-4 w-4" /> {D.back}</Link>
         <div className="grid gap-12 lg:grid-cols-12 lg:gap-16">
-          <div className="lg:col-span-6"><Gallery images={p.images} name={name} /></div>
-          <div className="lg:col-span-6">
+          <div className="min-w-0 lg:col-span-6"><Gallery images={p.images} name={name} /></div>
+          <div className="min-w-0 lg:col-span-6">
             <Link to={`/urunler?kategori=${p.category?.slug}`} className="inline-block rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-[#0B0F17]" style={{ background: accent }} data-testid="product-category-tag">{loc(p.category, "name")}</Link>
-            <h1 className="mt-6 font-display text-4xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-5xl lg:text-6xl" data-testid="product-name">{name}</h1>
+            <h1 className="mt-6 hyphens-auto break-words font-display text-3xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-5xl lg:text-6xl" data-testid="product-name">{name}</h1>
             {p.code && <p className="mt-4 font-mono text-sm uppercase tracking-[0.25em] text-slate-400" data-testid="product-code">{D.code}: {p.code}</p>}
+            <Price p={p} testid="product-detail-price" className="mt-6 inline-block rounded-2xl border border-[#FACC15]/40 bg-[#FACC15]/10 px-5 py-3 font-display text-2xl font-black text-[#FACC15]" />
             {p.summary && <p className="mt-6 text-lg text-slate-200">{loc(p, "summary")}</p>}
             {p.description && <p className="mt-4 whitespace-pre-line text-slate-300">{loc(p, "description")}</p>}
             <div className="mt-8">
@@ -87,7 +89,7 @@ export default function ProductDetail() {
               </ul>
             )}
             <button onClick={() => formRef.current?.scrollIntoView({ behavior: "smooth" })} data-testid="product-quote-btn"
-              className="group mt-10 inline-flex items-center gap-3 rounded-full bg-[#FF5722] px-8 py-4 font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-1 hover:bg-[#ff6a3d]">
+              className="group mt-10 inline-flex items-center gap-3 rounded-full bg-[#F2962B] px-8 py-4 font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-1 hover:bg-[#F5A94E]">
               {D.quoteBtn} <ArrowDown className="h-5 w-5 transition-transform group-hover:translate-y-1" />
             </button>
           </div>
@@ -95,11 +97,11 @@ export default function ProductDetail() {
       </section>
       <section ref={formRef} className="border-t border-white/10 bg-[#0E131D] py-20 md:py-28">
         <div className="mx-auto grid max-w-[1400px] gap-12 px-5 sm:px-8 lg:grid-cols-12">
-          <Reveal className="lg:col-span-4">
+          <Reveal className="min-w-0 lg:col-span-4">
             <Eyebrow>{D.formEyebrow}</Eyebrow>
-            <h2 className="font-display text-4xl font-black uppercase leading-[0.95] text-white sm:text-5xl">{D.formTitle}{name}</h2>
+            <h2 className="hyphens-auto break-words font-display text-3xl font-black uppercase leading-[0.95] text-white sm:text-5xl">{D.formTitle}{name}</h2>
           </Reveal>
-          <Reveal className="lg:col-span-8" delay={0.1}><QuoteForm defaultProductId={p.id} /></Reveal>
+          <Reveal className="min-w-0 lg:col-span-8" delay={0.1}><QuoteForm defaultProductId={p.id} /></Reveal>
         </div>
       </section>
       {!!related.length && (

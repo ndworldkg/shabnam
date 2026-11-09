@@ -28,7 +28,7 @@ export default function Catalog() {
     return () => clearTimeout(t);
   }, [active, q]);
 
-  const pill = (on) => `whitespace-nowrap rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors duration-300 ${on ? "border-[#FF5722] bg-[#FF5722] text-white" : "border-white/15 text-slate-300 hover:border-white/40 hover:text-white"}`;
+  const pill = (on) => `whitespace-nowrap rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors duration-300 ${on ? "border-[#F2962B] bg-[#F2962B] text-white" : "border-white/15 text-slate-300 hover:border-white/40 hover:text-white"}`;
 
   return (
     <main data-testid="catalog-page">
@@ -46,7 +46,7 @@ export default function Catalog() {
           <div className="relative lg:w-80">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={C.search}
-              className="w-full rounded-full border border-white/15 bg-white/5 py-3 pl-11 pr-4 text-white placeholder:text-slate-400 outline-none focus:border-[#FF5722]" data-testid="catalog-search-input" />
+              className="w-full rounded-full border border-white/15 bg-white/5 py-3 pl-11 pr-4 text-white placeholder:text-slate-400 outline-none focus:border-[#F2962B]" data-testid="catalog-search-input" />
           </div>
         </div>
       </div>

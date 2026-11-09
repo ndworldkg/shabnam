@@ -1,4 +1,4 @@
-export const aInput = "w-full rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#FF5722]";
+export const aInput = "w-full rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#F2962B]";
 
 export const AField = ({ label, children, className = "" }) => (
   <label className={`block ${className}`}>
@@ -18,7 +18,7 @@ export const AdminTitle = ({ title, sub, action }) => (
 );
 
 export const PrimaryBtn = ({ children, className = "", ...p }) => (
-  <button {...p} className={`inline-flex items-center justify-center gap-2 rounded-full bg-[#FF5722] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#ff6a3d] disabled:opacity-60 ${className}`}>{children}</button>
+  <button {...p} className={`inline-flex items-center justify-center gap-2 rounded-full bg-[#F2962B] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#F5A94E] disabled:opacity-60 ${className}`}>{children}</button>
 );
 
 export const toList = (s) => s.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);

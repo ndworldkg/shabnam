@@ -55,7 +55,7 @@ export const QuoteForm = ({ defaultProductId = "" }) => {
       <Field label={L.qty}><input type="number" min="0" className={inputCls} value={f.quantity} onChange={set("quantity")} data-testid="quote-quantity-input" /></Field>
       <label className="flex cursor-pointer items-center gap-3 sm:col-span-2" data-testid="quote-embroidery-toggle">
         <input type="checkbox" className="peer sr-only" checked={f.embroidery} onChange={set("embroidery")} />
-        <span className="flex h-6 w-6 items-center justify-center rounded-md border border-white/25 transition-colors peer-checked:border-[#FF5722] peer-checked:bg-[#FF5722]">
+        <span className="flex h-6 w-6 items-center justify-center rounded-md border border-white/25 transition-colors peer-checked:border-[#F2962B] peer-checked:bg-[#F2962B]">
           {f.embroidery && <Check className="h-4 w-4 text-white" />}
         </span>
         <span className="text-slate-200">{L.embroidery}</span>
@@ -65,7 +65,7 @@ export const QuoteForm = ({ defaultProductId = "" }) => {
       </Field>
       <div className="flex flex-wrap items-center gap-4 sm:col-span-2">
         <button disabled={busy} type="submit" data-testid="quote-submit-button"
-          className="group inline-flex items-center gap-3 rounded-full bg-[#FF5722] px-8 py-4 font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#ff6a3d] disabled:opacity-60">
+          className="group inline-flex items-center gap-3 rounded-full bg-[#F2962B] px-8 py-4 font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#F5A94E] disabled:opacity-60">
           {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />} {L.submit}
         </button>
         {done && <span className="text-sm text-emerald-400" data-testid="quote-success-message">{L.success}</span>}

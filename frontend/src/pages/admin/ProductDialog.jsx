@@ -15,9 +15,9 @@ const TR_FIELDS = [
 ];
 
 const blank = (cats) => ({ name: "", code: "", category_id: cats[0]?.id || "", summary: "", description: "", fabric: "", weight: "",
-  features: "", sizes: "S, M, L, XL, XXL", colors: "", images: [], featured: false, active: true, i18n: {} });
+  features: "", sizes: "S, M, L, XL, XXL", colors: "", images: [], featured: false, active: true, price_from: "", show_price: false, i18n: {} });
 
-const toForm = (p) => ({ ...p, features: (p.features || []).join("\n"), sizes: (p.sizes || []).join(", "), colors: (p.colors || []).join(", ") });
+const toForm = (p) => ({ ...p, price_from: p.price_from ?? "", show_price: !!p.show_price, features: (p.features || []).join("\n"), sizes: (p.sizes || []).join(", "), colors: (p.colors || []).join(", ") });
 
 export const ProductDialog = ({ open, onClose, product, categories, onSaved }) => {
   const [f, setF] = useState(blank(categories));
@@ -34,7 +34,7 @@ export const ProductDialog = ({ open, onClose, product, categories, onSaved }) =
     if (!f.category_id) return toast.error("Önce bir kategori oluşturun.");
     setBusy(true);
     const body = { name: f.name, code: f.code, category_id: f.category_id, summary: f.summary, description: f.description, fabric: f.fabric,
-      weight: f.weight, features: toList(f.features), sizes: toList(f.sizes), colors: toList(f.colors), images: f.images, featured: f.featured, active: f.active, i18n: cleanI18n(f.i18n) };
+      weight: f.weight, features: toList(f.features), sizes: toList(f.sizes), colors: toList(f.colors), images: f.images, featured: f.featured, active: f.active, price_from: f.price_from === "" ? null : Number(f.price_from), show_price: f.show_price, i18n: cleanI18n(f.i18n) };
     try {
       if (product) await api.put(`/products/${product.id}`, body);
       else await api.post("/products", body);
@@ -66,7 +66,10 @@ export const ProductDialog = ({ open, onClose, product, categories, onSaved }) =
           <AField label="Kumaş"><input className={aInput} value={f.fabric} onChange={set("fabric")} data-testid="product-fabric-input" /></AField>
           <AField label="Gramaj"><input className={aInput} value={f.weight} onChange={set("weight")} data-testid="product-weight-input" /></AField>
           <AField label="Bedenler (virgülle)"><input className={aInput} value={f.sizes} onChange={set("sizes")} data-testid="product-sizes-input" /></AField>
-          <AField label="Renkler (virgülle)" className="sm:col-span-2"><input className={aInput} value={f.colors} onChange={set("colors")} data-testid="product-colors-input" /></AField>
+          <AField label="Renkler (virgülle)"><input className={aInput} value={f.colors} onChange={set("colors")} data-testid="product-colors-input" /></AField>
+          <AField label="Başlangıç fiyatı (so'm)">
+            <input type="number" min="0" step="1000" className={aInput} value={f.price_from} onChange={set("price_from")} placeholder="Örn. 150000" data-testid="product-price-input" />
+          </AField>
           <AField label="Kısa açıklama" className="sm:col-span-2"><input className={aInput} value={f.summary} onChange={set("summary")} data-testid="product-summary-input" /></AField>
           <AField label="Detaylı açıklama" className="sm:col-span-2"><textarea rows={4} className={aInput} value={f.description} onChange={set("description")} data-testid="product-description-input" /></AField>
           <AField label="Özellikler (her satıra bir tane)" className="sm:col-span-2"><textarea rows={4} className={aInput} value={f.features} onChange={set("features")} data-testid="product-features-input" /></AField>
@@ -74,6 +77,7 @@ export const ProductDialog = ({ open, onClose, product, categories, onSaved }) =
           <div className="flex flex-wrap gap-8 sm:col-span-2">
             <label className="flex items-center gap-3 text-sm"><Switch checked={f.featured} onCheckedChange={(v) => setF({ ...f, featured: v })} data-testid="product-featured-switch" /> Ana sayfada öne çıkar</label>
             <label className="flex items-center gap-3 text-sm"><Switch checked={f.active} onCheckedChange={(v) => setF({ ...f, active: v })} data-testid="product-active-switch" /> Sitede yayında</label>
+            <label className="flex items-center gap-3 text-sm"><Switch checked={f.show_price} onCheckedChange={(v) => setF({ ...f, show_price: v })} data-testid="product-show-price-switch" /> Fiyatı sitede göster</label>
           </div>
           <div className="flex justify-end gap-3 sm:col-span-2">
             <button type="button" onClick={onClose} className="rounded-full px-5 py-2.5 text-sm text-slate-300 hover:text-white" data-testid="product-cancel-button">Vazgeç</button>

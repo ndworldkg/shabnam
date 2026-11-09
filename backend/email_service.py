@@ -125,7 +125,7 @@ def quote_email_html(q: dict) -> str:
         '<table role="presentation" width="100%" style="background:#f4f4f5;padding:24px 0"><tr><td align="center">'
         '<table role="presentation" width="600" style="background:#ffffff;border-radius:12px;overflow:hidden;font-family:Arial,sans-serif">'
         f'<tr><td style="background:#0B0F17;padding:24px;color:#ffffff;font-size:20px;font-weight:bold">'
-        f'{escape(EMAIL_FROM_NAME)} <span style="color:#FF5722">· Yeni Teklif Talebi</span></td></tr>'
+        f'{escape(EMAIL_FROM_NAME)} <span style="color:#F2962B">· Yeni Teklif Talebi</span></td></tr>'
         '<tr><td style="height:6px;background:#FACC15"></td></tr>'
         f'<tr><td style="padding:24px"><table role="presentation" width="100%" style="border-collapse:collapse">{trs}</table>'
         + (f'<p style="margin:20px 0 6px;color:#64748b;font-size:13px">Mesaj</p><p style="margin:0;color:#0B0F17;font-size:14px;line-height:1.6">{msg}</p>' if msg else "")

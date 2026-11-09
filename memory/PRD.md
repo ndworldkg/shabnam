@@ -32,6 +32,15 @@ User choices: Firma adı "Shabnam elegant"; admin girişi Google ile; fotoğrafl
 - "Eksik çevirileri tamamla" button → POST /api/admin/translate-missing
 - PDF catalog in selected language (?lang=ru|uz); quote email remains Turkish
 
+## Implemented (2026-11-09, later)
+- Optional "from" price in so'm per product (price_from + show_price toggle); shown on cards, detail, PDF
+- Telegram quote alerts (telegram_service.py, Bot API via httpx); TELEGRAM_BOT_TOKEN secret + settings.telegram_chat_id; admin "Sohbeti bul" (getUpdates) and "Test" buttons
+- Mobile fix: long Russian product names no longer overflow on detail page
+
+## Implemented (2026-11-09, logo)
+- Customer logo (uploaded JPG) cut out to transparent PNG: /frontend/public/logo-mark.png, logo-full.png; favicon.png/logo192.png; PDF cover uses /backend/assets/logo-mark.png
+- Brand orange #F2962B replaces previous #FF5722 site-wide (buttons get dark text for contrast); brand wordmark in Lato
+
 ## Backlog
 - P1: Email notification on new quote/message; product drag-sort; PDF catalog download
 - P2: Multi-language (EN/AR), SEO meta per product, WhatsApp floating button

@@ -26,7 +26,7 @@ export const FeaturedProducts = () => {
           </Reveal>
           <Reveal delay={0.1}>
             <Link to="/urunler" data-testid="featured-all-link" className="group inline-flex items-center gap-3 font-semibold text-white">
-              <span className="border-b border-white/30 pb-1 transition-colors group-hover:border-[#FF5722]">{f.all}</span>
+              <span className="border-b border-white/30 pb-1 transition-colors group-hover:border-[#F2962B]">{f.all}</span>
               <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
             </Link>
           </Reveal>

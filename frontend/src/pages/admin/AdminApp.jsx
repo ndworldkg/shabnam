@@ -56,7 +56,7 @@ export default function AdminApp() {
     if (authed) loadStats();
   }, [authed, tab]);
 
-  if (authed === null) return <main className="flex min-h-screen items-center justify-center bg-[#0B0F17]"><Loader2 className="h-8 w-8 animate-spin text-[#FF5722]" /></main>;
+  if (authed === null) return <main className="flex min-h-screen items-center justify-center bg-[#0B0F17]"><Loader2 className="h-8 w-8 animate-spin text-[#F2962B]" /></main>;
   if (!authed) return <Login />;
 
   const logout = async () => {
@@ -72,7 +72,7 @@ export default function AdminApp() {
         <nav className="no-scrollbar mt-6 flex gap-2 overflow-x-auto lg:mt-10 lg:flex-col">
           {TABS.map(({ id, label, icon: I, badge }) => (
             <button key={id} onClick={() => setTab(id)} data-testid={`admin-tab-${id}`}
-              className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${tab === id ? "bg-[#FF5722] text-white" : "text-slate-300 hover:bg-white/5"}`}>
+              className={`flex shrink-0 items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${tab === id ? "bg-[#F2962B] text-white" : "text-slate-300 hover:bg-white/5"}`}>
               <I className="h-4 w-4" /> {label}
               {badge && stats[badge] > 0 && <span className="ml-auto rounded-full bg-[#FACC15] px-2 text-xs font-bold text-[#0B0F17]">{stats[badge]}</span>}
             </button>

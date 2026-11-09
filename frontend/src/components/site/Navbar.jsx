@@ -33,7 +33,7 @@ export const Navbar = () => {
         <div className="hidden items-center gap-3 md:flex">
         <LangSwitch />
         <Link to="/teklif" data-testid="nav-quote-cta"
-          className="group flex items-center gap-2 rounded-full bg-[#FF5722] px-5 py-2.5 text-sm font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#ff6a3d]">
+          className="group flex items-center gap-2 rounded-full bg-[#F2962B] px-5 py-2.5 text-sm font-semibold text-white transition-[background-color,transform] duration-300 hover:-translate-y-0.5 hover:bg-[#F5A94E]">
           {t.nav.quick} <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:rotate-45" />
         </Link>
         </div>

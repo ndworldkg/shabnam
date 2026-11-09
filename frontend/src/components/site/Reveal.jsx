@@ -13,7 +13,7 @@ export const Reveal = ({ children, delay = 0, y = 36, className = "" }) => (
   </motion.div>
 );
 
-export const Eyebrow = ({ children, color = "#FF8A65" }) => (
+export const Eyebrow = ({ children, color = "#F7B267" }) => (
   <p className="mb-5 flex items-center gap-3 font-mono text-xs font-semibold uppercase tracking-[0.25em]" style={{ color }}>
     <span className="h-px w-8" style={{ background: color }} />
     {children}

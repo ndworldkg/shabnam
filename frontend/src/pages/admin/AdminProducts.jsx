@@ -78,7 +78,7 @@ export default function AdminProducts({ onChange }) {
         </div>} />
       <div className="relative mb-6 max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ürün ara" className="w-full rounded-lg border border-white/15 bg-white/5 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#FF5722]" data-testid="admin-product-search" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ürün ara" className="w-full rounded-lg border border-white/15 bg-white/5 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#F2962B]" data-testid="admin-product-search" />
       </div>
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3">
         {shown.map((p, idx) => (
@@ -87,7 +87,7 @@ export default function AdminProducts({ onChange }) {
             onDragOver={(e) => canSort && e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); if (dragId) moveTo(dragId, idx); setDragId(null); }}
             onDragEnd={() => setDragId(null)}
-            className={`flex min-w-0 items-center gap-3 rounded-2xl border bg-[#131924] p-3 transition-[opacity,border-color] ${dragId === p.id ? "border-[#FF5722] opacity-50" : "border-white/10"} ${canSort ? "cursor-grab active:cursor-grabbing" : ""}`}>
+            className={`flex min-w-0 items-center gap-3 rounded-2xl border bg-[#131924] p-3 transition-[opacity,border-color] ${dragId === p.id ? "border-[#F2962B] opacity-50" : "border-white/10"} ${canSort ? "cursor-grab active:cursor-grabbing" : ""}`}>
             {canSort && (
               <div className="flex shrink-0 flex-col items-center text-slate-400">
                 <button onClick={() => moveTo(p.id, idx - 1)} disabled={idx === 0} className="rounded p-0.5 hover:text-white disabled:opacity-20" data-testid={`admin-move-up-${p.id}`} aria-label="Yukarı taşı"><ChevronUp className="h-4 w-4" /></button>

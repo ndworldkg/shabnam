@@ -34,7 +34,7 @@ export const ImageUploader = ({ value = [], onChange, multiple = true, testid = 
         {value.map((u, i) => (
           <div key={u} className="group relative h-28 w-24 overflow-hidden rounded-xl border border-white/15">
             <img src={img(u)} alt="" className="h-full w-full object-cover" />
-            {i === 0 && multiple && <span className="absolute left-1 top-1 rounded bg-[#FF5722] px-1.5 text-[10px] font-bold">KAPAK</span>}
+            {i === 0 && multiple && <span className="absolute left-1 top-1 rounded bg-[#F2962B] px-1.5 text-[10px] font-bold">KAPAK</span>}
             <div className="absolute inset-x-0 bottom-0 flex justify-between bg-black/70 p-1 opacity-0 transition-opacity group-hover:opacity-100">
               {multiple && i > 0 ? <button type="button" onClick={() => cover(u)} title="Kapak yap" data-testid={`${testid}-cover-${i}`}><Star className="h-4 w-4 text-[#FACC15]" /></button> : <span />}
               <button type="button" onClick={() => remove(u)} title="Kaldır" data-testid={`${testid}-remove-${i}`}><X className="h-4 w-4 text-red-400" /></button>
@@ -42,7 +42,7 @@ export const ImageUploader = ({ value = [], onChange, multiple = true, testid = 
           </div>
         ))}
         <button type="button" onClick={() => ref.current?.click()} disabled={busy} data-testid={`${testid}-button`}
-          className="flex h-28 w-24 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/20 text-xs text-slate-300 transition-colors hover:border-[#FF5722] hover:text-white">
+          className="flex h-28 w-24 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/20 text-xs text-slate-300 transition-colors hover:border-[#F2962B] hover:text-white">
           {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
           {busy ? "Yükleniyor" : "Fotoğraf yükle"}
         </button>

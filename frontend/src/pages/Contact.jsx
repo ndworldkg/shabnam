@@ -26,8 +26,8 @@ export default function Contact() {
           <div className="space-y-3">
             {rows.map(({ icon: I, k, v, href, id }) => {
               const Inner = (
-                <div className="group flex items-start gap-5 rounded-2xl border border-white/10 bg-[#131924] p-6 transition-colors duration-300 hover:border-[#FF5722]/60">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#FF5722]/15 text-[#FF8A65]"><I className="h-5 w-5" /></span>
+                <div className="group flex items-start gap-5 rounded-2xl border border-white/10 bg-[#131924] p-6 transition-colors duration-300 hover:border-[#F2962B]/60">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#F2962B]/15 text-[#F7B267]"><I className="h-5 w-5" /></span>
                   <span>
                     <span className="block font-mono text-[11px] uppercase tracking-[0.2em] text-slate-400">{k}</span>
                     <span className="mt-1 block text-lg text-white">{v}</span>

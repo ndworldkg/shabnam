@@ -10,8 +10,8 @@ import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
 
 const TR_FIELDS = [{ k: "name", label: "Kategori adı", type: "text" }, { k: "description", label: "Açıklama", type: "text" }];
 
-const COLORS = ["#FF5722", "#FACC15", "#3B82F6", "#10B981", "#EC4899", "#A78BFA", "#F97316", "#22D3EE"];
-const BLANK = { name: "", description: "", image: "", accent: "#FF5722", order: 0, i18n: {} };
+const COLORS = ["#F2962B", "#FACC15", "#3B82F6", "#10B981", "#EC4899", "#A78BFA", "#F97316", "#22D3EE"];
+const BLANK = { name: "", description: "", image: "", accent: "#F2962B", order: 0, i18n: {} };
 
 export default function AdminCategories({ onChange }) {
   const { categories, reload } = useSite();
