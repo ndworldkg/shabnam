@@ -1,7 +1,12 @@
+import asyncio
 import logging
 import os
 import re
 import ipaddress
+import smtplib
+import ssl
+from email.message import EmailMessage
+from email.utils import formataddr
 from html import escape
 from html.parser import HTMLParser
 from urllib.parse import urlparse
@@ -11,9 +16,10 @@ import httpx
 logger = logging.getLogger(__name__)
 
 EMAIL_BASE_URL = "https://integrations.emergentagent.com"
-EMAIL_KEY = os.environ["EMERGENT_EMAIL_KEY"]
+EMAIL_KEY = os.environ.get("EMERGENT_EMAIL_KEY", "")
 EMAIL_FROM_NAME = os.environ["EMAIL_FROM_NAME"]
 EMAIL_REPLY_TO = os.environ.get("EMAIL_REPLY_TO")
+SMTP_HOST = os.environ.get("SMTP_HOST", "").strip()
 
 _SHORTENERS = ("bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "goo.gl", "rebrand.ly")
 _CRED_ASK = ("reply with your password", "reply with the code", "send your password", "cvv",
@@ -88,8 +94,41 @@ def _assert_safe_email(subject: str, html: str) -> None:
                 raise ValueError(f"Anchor text {m.group(1)!r} ≠ real link host {real!r} (G3)")
 
 
+def _smtp_send(to: str, subject: str, html: str, reply_to: str | None) -> None:
+    msg = EmailMessage()
+    sender = os.environ.get("SMTP_FROM") or os.environ["SMTP_USER"]
+    msg["From"] = formataddr((EMAIL_FROM_NAME, sender))
+    msg["To"] = to
+    msg["Subject"] = subject
+    if reply_to:
+        msg["Reply-To"] = reply_to
+    msg.set_content("Yeni teklif talebi. HTML görüntüleyen bir e-posta programı kullanın.")
+    msg.add_alternative(html, subtype="html")
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    ctx = ssl.create_default_context()
+    if port == 465:
+        with smtplib.SMTP_SSL(SMTP_HOST, port, context=ctx, timeout=30) as s:
+            s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+            s.send_message(msg)
+    else:
+        with smtplib.SMTP(SMTP_HOST, port, timeout=30) as s:
+            s.starttls(context=ctx)
+            s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+            s.send_message(msg)
+
+
 async def send_email(*, to: str, subject: str, html: str, reply_to: str | None = None) -> str | None:
     _assert_safe_email(subject, html)
+    if SMTP_HOST:
+        try:
+            await asyncio.to_thread(_smtp_send, to, subject, html, reply_to or EMAIL_REPLY_TO)
+            return "smtp"
+        except Exception as e:
+            logger.error(f"SMTP send failed: {e}")
+            return None
+    if not EMAIL_KEY:
+        logger.warning("No email transport configured (SMTP_HOST or EMERGENT_EMAIL_KEY)")
+        return None
     payload = {"to": [to], "subject": subject, "html": html, "from_name": EMAIL_FROM_NAME}
     if reply_to or EMAIL_REPLY_TO:
         payload["contact_email"] = reply_to or EMAIL_REPLY_TO

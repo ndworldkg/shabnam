@@ -3,9 +3,10 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { api, errMsg } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
-import { AdminTitle, AField, aInput, PrimaryBtn, toList } from "@/pages/admin/ui";
+import { AdminTitle, AField, aInput, PrimaryBtn } from "@/pages/admin/ui";
 import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
 import { TelegramSettings } from "@/pages/admin/TelegramSettings";
+import { ChangePassword } from "@/pages/admin/ChangePassword";
 
 const TR_FIELDS = [
   { k: "tagline", label: "Slogan", type: "text" }, { k: "working_hours", label: "Çalışma saatleri", type: "text" },
@@ -21,22 +22,17 @@ const FIELDS = [
 export default function AdminSettings() {
   const { settings, reload } = useSite();
   const [f, setF] = useState(settings);
-  const [owner, setOwner] = useState("");
-  const [admins, setAdmins] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setF(settings);
   }, [settings]);
-  useEffect(() => {
-    api.get("/admin/admins").then((r) => { setOwner(r.data?.owner || ""); setAdmins((r.data?.emails || []).join(", ")); }).catch(() => {});
-  }, []);
 
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
-      await api.put("/settings", { ...f, i18n: cleanI18n(f?.i18n), admin_emails: toList(admins) });
+      await api.put("/settings", { ...f, i18n: cleanI18n(f?.i18n) });
       toast.success("Firma bilgileri güncellendi");
       reload();
     } catch (err) {
@@ -56,14 +52,11 @@ export default function AdminSettings() {
               : <input className={aInput} value={f?.[k] || ""} onChange={(e) => setF({ ...f, [k]: e.target.value })} data-testid={`settings-${k}-input`} />}
           </AField>
         ))}
-        <AField label="Ek yönetici Google e-postaları (virgülle)" className="sm:col-span-2">
-          <input className={aInput} value={admins} onChange={(e) => setAdmins(e.target.value)} placeholder="ornek@gmail.com" data-testid="settings-admin-emails-input" />
-          <span className="mt-1.5 block text-xs text-slate-400">Ana yönetici: {owner || "-"}</span>
-        </AField>
         <TelegramSettings value={f?.telegram_chat_id} onChange={(v) => setF({ ...f, telegram_chat_id: v })} />
         <TranslationFields value={f?.i18n || {}} onChange={(i18n) => setF({ ...f, i18n })} fields={TR_FIELDS} testid="settings-i18n" />
         <div className="sm:col-span-2"><PrimaryBtn type="submit" disabled={busy} data-testid="settings-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Kaydet</PrimaryBtn></div>
       </form>
+      <ChangePassword />
     </div>
   );
 }

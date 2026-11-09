@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Loader2, LogOut, Package, Layers, FileText, Mail, Settings, ExternalLink } from "lucide-react";
-import { api } from "@/lib/api";
+import { Link } from "react-router-dom";
+import { Loader2, LogOut, Package, Layers, FileText, Mail, Settings, ExternalLink, LogIn } from "lucide-react";
+import { api, errMsg } from "@/lib/api";
 import { Logo } from "@/components/Logo";
 import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminCategories from "@/pages/admin/AdminCategories";
@@ -16,40 +16,58 @@ const TABS = [
   { id: "settings", label: "Firma Bilgileri", icon: Settings, C: AdminSettings },
 ];
 
-const Login = () => {
-  const login = () => {
-    // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-    const redirectUrl = window.location.origin + "/admin";
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+const Login = ({ onLogin }) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const r = await api.post("/auth/login", { email, password });
+      onLogin(r.data);
+    } catch (err) {
+      setError(errMsg(err, "Giriş yapılamadı"));
+    } finally {
+      setBusy(false);
+    }
   };
+  const inp = "w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3.5 text-white outline-none focus:border-[#F2962B]";
   return (
     <main className="hero-grid flex min-h-screen items-center justify-center bg-[#0B0F17] px-5" data-testid="admin-login-page">
-      <div className="w-full max-w-md rounded-[24px] border border-white/10 bg-[#131924] p-8 md:p-10">
+      <form onSubmit={submit} className="w-full max-w-md rounded-[24px] border border-white/10 bg-[#131924] p-8 md:p-10" data-testid="admin-login-form">
         <Logo />
         <h1 className="mt-10 font-display text-4xl font-black uppercase leading-none text-white">Yönetim Paneli</h1>
-        <p className="mt-4 text-slate-300">Ürünleri eklemek ve firma bilgilerini güncellemek için yetkili Google hesabınızla giriş yapın.</p>
-        <button onClick={login} data-testid="admin-google-login-button"
-          className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-white px-6 py-4 font-semibold text-[#0B0F17] transition-colors hover:bg-[#FACC15]">
-          <svg viewBox="0 0 24 24" className="h-5 w-5"><path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h5.9c-.3 1.4-1 2.5-2.2 3.3v2.7h3.6c2.1-1.9 3.3-4.8 3.3-8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1.1-3.7 1.1-2.9 0-5.3-1.9-6.2-4.5H2.1v2.8C3.9 20.5 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.8 14.2c-.2-.7-.4-1.4-.4-2.2s.1-1.5.4-2.2V7H2.1C1.4 8.5 1 10.2 1 12s.4 3.5 1.1 5l3.7-2.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3.1.6 4.2 1.7l3.2-3.2C17.5 2.1 15 1 12 1 7.7 1 3.9 3.5 2.1 7l3.7 2.8c.9-2.6 3.3-4.4 6.2-4.4z"/></svg>
-          Google ile Giriş Yap
+        <p className="mt-4 text-slate-300">Ürünleri ve firma bilgilerini yönetmek için giriş yapın.</p>
+        <label className="mt-8 block text-xs font-semibold uppercase tracking-wider text-slate-300">E-posta
+          <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className={`${inp} mt-1.5`} data-testid="admin-login-email" />
+        </label>
+        <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-slate-300">Şifre
+          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={`${inp} mt-1.5`} data-testid="admin-login-password" />
+        </label>
+        {error && <p className="mt-4 text-sm text-red-400" data-testid="admin-login-error">{error}</p>}
+        <button type="submit" disabled={busy} data-testid="admin-login-submit"
+          className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-[#F2962B] px-6 py-4 font-semibold transition-colors hover:bg-[#F5A94E] disabled:opacity-60">
+          {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />} Giriş Yap
         </button>
         <Link to="/" className="mt-6 block text-center text-sm text-slate-400 hover:text-white" data-testid="admin-back-to-site">← Siteye dön</Link>
-      </div>
+      </form>
     </main>
   );
 };
 
 export default function AdminApp() {
-  const location = useLocation();
-  const [user, setUser] = useState(location.state?.user || null);
-  const [authed, setAuthed] = useState(location.state?.user ? true : null);
+  const [user, setUser] = useState(null);
+  const [authed, setAuthed] = useState(null);
   const [tab, setTab] = useState("products");
   const [stats, setStats] = useState({});
 
   useEffect(() => {
-    if (location.state?.user) return;
-    api.get("/auth/me").then((r) => { setUser(r.data); setAuthed(true); }).catch(() => setAuthed(false));
-  }, [location.state]);
+    api.get("/auth/me").then((r) => { setUser(r.data); setAuthed(true); })
+      .catch(() => api.post("/auth/refresh").then(() => api.get("/auth/me")).then((r) => { setUser(r.data); setAuthed(true); }).catch(() => setAuthed(false)));
+  }, []);
 
   const loadStats = () => api.get("/admin/stats").then((r) => setStats(r.data || {})).catch(() => {});
   useEffect(() => {
@@ -57,7 +75,7 @@ export default function AdminApp() {
   }, [authed, tab]);
 
   if (authed === null) return <main className="flex min-h-screen items-center justify-center bg-[#0B0F17]"><Loader2 className="h-8 w-8 animate-spin text-[#F2962B]" /></main>;
-  if (!authed) return <Login />;
+  if (!authed) return <Login onLogin={(u) => { setUser(u); setAuthed(true); }} />;
 
   const logout = async () => {
     await api.post("/auth/logout").catch(() => {});

@@ -41,6 +41,13 @@ User choices: Firma adı "Shabnam elegant"; admin girişi Google ile; fotoğrafl
 - Customer logo (uploaded JPG) cut out to transparent PNG: /frontend/public/logo-mark.png, logo-full.png; favicon.png/logo192.png; PDF cover uses /backend/assets/logo-mark.png
 - Brand orange #F2962B replaces previous #FF5722 site-wide (buttons get dark text for contrast); brand wordmark in Lato
 
+## Implemented (2026-11-09, self-host)
+- Auth switched from Emergent Google to email+password JWT (auth.py; admin seeded from ADMIN_EMAIL/ADMIN_PASSWORD; brute-force lock 5/15min; change password in panel; reset_admin_password.py)
+- storage.py: Emergent object storage (preview) or MongoDB GridFS when STORAGE_BACKEND=mongo (VPS)
+- Email: SMTP when SMTP_HOST set, else Emergent-managed (preview)
+- Translation: ANTHROPIC_API_KEY+ANTHROPIC_MODEL direct, else EMERGENT_LLM_KEY
+- deploy/: docker-compose (mongo + backend + Caddy auto-HTTPS serving React build), env.example, KURULUM.md (Turkish guide), export_data.py + data/shabnam.archive.gz (DB + images snapshot 2026-11-09)
+
 ## Backlog
 - P1: Email notification on new quote/message; product drag-sort; PDF catalog download
 - P2: Multi-language (EN/AR), SEO meta per product, WhatsApp floating button

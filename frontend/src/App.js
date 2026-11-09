@@ -1,5 +1,5 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation, Outlet } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { LangProvider } from "@/i18n/LangContext";
@@ -13,7 +13,6 @@ import ProductDetail from "@/pages/ProductDetail";
 import Quote from "@/pages/Quote";
 import Contact from "@/pages/Contact";
 import AdminApp from "@/pages/admin/AdminApp";
-import AuthCallback from "@/pages/admin/AuthCallback";
 
 const SiteLayout = () => (
   <div className="grain min-h-screen bg-[#0B0F17]">
@@ -25,8 +24,6 @@ const SiteLayout = () => (
 );
 
 function AppRouter() {
-  const location = useLocation();
-  if (location.hash?.includes("session_id=")) return <AuthCallback />;
   return (
     <Routes>
       <Route element={<SiteLayout />}>

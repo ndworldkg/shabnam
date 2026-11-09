@@ -4,7 +4,7 @@ import os
 import re
 import uuid
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+
 
 logger = logging.getLogger(__name__)
 LANGS = ("ru", "uz")
@@ -21,11 +21,24 @@ SYSTEM = (
 )
 
 
+async def _ask(text: str) -> str:
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        from anthropic import AsyncAnthropic
+        client = AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        msg = await client.messages.create(model=os.environ["ANTHROPIC_MODEL"], max_tokens=4000, system=SYSTEM,
+                                           messages=[{"role": "user", "content": text}])
+        return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
+    if os.environ.get("EMERGENT_LLM_KEY"):
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"tr-{uuid.uuid4().hex}", system_message=SYSTEM) \
+            .with_model("anthropic", "claude-sonnet-5-5")
+        raw = await chat.send_message(UserMessage(text=text))
+        return raw if isinstance(raw, str) else str(raw)
+    raise RuntimeError("No translation provider configured (ANTHROPIC_API_KEY)")
+
+
 async def translate(fields: dict) -> dict:
-    chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"tr-{uuid.uuid4().hex}", system_message=SYSTEM) \
-        .with_model("anthropic", "claude-sonnet-5-5")
-    raw = await chat.send_message(UserMessage(text=json.dumps(fields, ensure_ascii=False)))
-    text = raw if isinstance(raw, str) else str(raw)
+    text = await _ask(json.dumps(fields, ensure_ascii=False))
     match = re.search(r"\{.*\}", text, re.S)
     return json.loads(match.group(0)) if match else {}
 

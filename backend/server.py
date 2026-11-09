@@ -4,11 +4,10 @@ import os
 import re
 import uuid
 from contextlib import suppress
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-import requests
 from dotenv import load_dotenv
 from fastapi import APIRouter, BackgroundTasks, FastAPI, File, HTTPException, Request, Response, UploadFile
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -23,6 +22,8 @@ from email_service import send_email, quote_email_html  # noqa: E402
 from catalog_pdf import build_catalog  # noqa: E402
 from translator import localize, PRODUCT_KEYS, CATEGORY_KEYS, SETTINGS_KEYS  # noqa: E402
 from telegram_service import send_telegram, recent_chats, quote_telegram_text  # noqa: E402
+from storage import save_file, read_file  # noqa: E402
+from auth import build_auth  # noqa: E402
 
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
@@ -35,8 +36,8 @@ INDEXES = {
                  IndexModel([("created_at", DESCENDING)], name="created_desc")],
     "quotes": [IndexModel([("id", ASCENDING)], name="id", unique=True), IndexModel([("created_at", DESCENDING)], name="created_desc")],
     "messages": [IndexModel([("id", ASCENDING)], name="id", unique=True), IndexModel([("created_at", DESCENDING)], name="created_desc")],
-    "users": [IndexModel([("email", ASCENDING)], name="email", unique=True)],
-    "user_sessions": [IndexModel([("session_token", ASCENDING)], name="token", unique=True)],
+    "users": [IndexModel([("email", ASCENDING)], name="email", unique=True), IndexModel([("id", ASCENDING)], name="uid")],
+    "login_attempts": [IndexModel([("identifier", ASCENDING)], name="identifier")],
     "files": [IndexModel([("storage_path", ASCENDING)], name="path")],
     "meta": [IndexModel([("key", ASCENDING)], name="key", unique=True)],
 }
@@ -53,42 +54,9 @@ async def ensure_indexes() -> None:
 
 app = FastAPI()
 api = APIRouter(prefix="/api")
-
-# ---------- Storage ----------
-STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
-STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+auth_router, require_admin, seed_admin = build_auth(db)
+api.include_router(auth_router)
 APP_NAME = "shabnam-elegant"
-storage_key = None
-
-
-def init_storage(force: bool = False):
-    global storage_key
-    if storage_key and not force:
-        return storage_key
-    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-    resp.raise_for_status()
-    storage_key = resp.json()["storage_key"]
-    return storage_key
-
-
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type},
-                        data=data, timeout=120)
-    if resp.status_code == 404:
-        key = init_storage(force=True)
-        resp = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type},
-                            data=data, timeout=120)
-    resp.raise_for_status()
-    return resp.json()
-
-
-def get_object(path: str):
-    key = init_storage()
-    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 
 # ---------- Helpers ----------
@@ -101,40 +69,6 @@ TR_MAP = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
 
 def slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.translate(TR_MAP).lower()).strip("-") or uuid.uuid4().hex[:6]
-
-
-async def require_admin(request: Request) -> dict:
-    token = request.cookies.get("session_token")
-    auth = request.headers.get("Authorization", "")
-    if not token and auth.startswith("Bearer "):
-        token = auth[7:]
-    if not token:
-        raise HTTPException(401, "Giriş gerekli")
-    session = await db.user_sessions.find_one({"session_token": token}, {"_id": 0})
-    if not session:
-        raise HTTPException(401, "Oturum bulunamadı")
-    expires_at = session["expires_at"]
-    if isinstance(expires_at, str):
-        expires_at = datetime.fromisoformat(expires_at)
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if expires_at < datetime.now(timezone.utc):
-        raise HTTPException(401, "Oturum süresi doldu")
-    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
-    if not user or not user.get("is_admin"):
-        raise HTTPException(403, "Yetkiniz yok")
-    return user
-
-
-async def email_allowed(email: str) -> bool:
-    env_list = [e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()]
-    if email in env_list:
-        return True
-    # first Google login claims ownership; afterwards only owner + listed admins
-    await db.meta.update_one({"key": "owner"}, {"$setOnInsert": {"key": "owner", "email": email, "created_at": now_iso()}}, upsert=True)
-    owner = await db.meta.find_one({"key": "owner"}, {"_id": 0})
-    extra = await db.meta.find_one({"key": "admins"}, {"_id": 0}) or {}
-    return email == owner["email"] or email in extra.get("emails", [])
 
 
 # ---------- Models ----------
@@ -201,7 +135,6 @@ class SettingsIn(BaseModel):
     working_hours: str = ""
     notification_email: str = ""
     telegram_chat_id: str = ""
-    admin_emails: List[str] = []
     i18n: dict = {}
 
 
@@ -223,45 +156,6 @@ DEFAULT_SETTINGS = {
 }
 
 
-# ---------- Auth ----------
-@api.post("/auth/session")
-async def auth_session(request: Request, response: Response):
-    sid = request.headers.get("X-Session-ID")
-    if not sid:
-        raise HTTPException(400, "session_id eksik")
-    r = await asyncio.to_thread(requests.get, "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                                headers={"X-Session-ID": sid}, timeout=20)
-    if r.status_code != 200:
-        raise HTTPException(401, "Google oturumu doğrulanamadı")
-    data = r.json()
-    email = data["email"].lower()
-    if not await email_allowed(email):
-        raise HTTPException(403, "Bu Google hesabının yönetim paneline erişim yetkisi yok.")
-    existing = await db.users.find_one({"email": email}, {"_id": 0})
-    user_id = existing["user_id"] if existing else f"user_{uuid.uuid4().hex[:12]}"
-    await db.users.update_one({"email": email}, {"$set": {"name": data.get("name", ""), "picture": data.get("picture", ""), "is_admin": True},
-                                                 "$setOnInsert": {"user_id": user_id, "email": email, "created_at": now_iso()}}, upsert=True)
-    token = data["session_token"]
-    await db.user_sessions.insert_one({"user_id": user_id, "session_token": token,
-                                       "expires_at": datetime.now(timezone.utc) + timedelta(days=7), "created_at": now_iso()})
-    response.set_cookie("session_token", token, httponly=True, secure=True, samesite="none", path="/", max_age=7 * 24 * 3600)
-    return await db.users.find_one({"email": email}, {"_id": 0})
-
-
-@api.get("/auth/me")
-async def auth_me(request: Request):
-    return await require_admin(request)
-
-
-@api.post("/auth/logout")
-async def auth_logout(request: Request, response: Response):
-    token = request.cookies.get("session_token")
-    if token:
-        await db.user_sessions.delete_one({"session_token": token})
-    response.delete_cookie("session_token", path="/", secure=True, samesite="none")
-    return {"ok": True}
-
-
 # ---------- Files ----------
 @api.post("/upload")
 async def upload(request: Request, file: UploadFile = File(...)):
@@ -272,12 +166,12 @@ async def upload(request: Request, file: UploadFile = File(...)):
     if len(data) > 10 * 1024 * 1024:
         raise HTTPException(400, "Dosya 10MB'dan büyük olamaz")
     ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "jpg"
-    path = f"{APP_NAME}/uploads/{user['user_id']}/{uuid.uuid4()}.{ext}"
-    result = await asyncio.to_thread(put_object, path, data, file.content_type)
-    await db.files.insert_one({"id": str(uuid.uuid4()), "storage_path": result["path"], "original_filename": file.filename,
-                               "content_type": file.content_type, "size": result.get("size", len(data)), "is_deleted": False,
+    path = f"{APP_NAME}/uploads/{user['id']}/{uuid.uuid4()}.{ext}"
+    await asyncio.to_thread(save_file, path, data, file.content_type)
+    await db.files.insert_one({"id": str(uuid.uuid4()), "storage_path": path, "original_filename": file.filename,
+                               "content_type": file.content_type, "size": len(data), "is_deleted": False,
                                "created_at": now_iso()})
-    return {"url": f"/api/files/{result['path']}"}
+    return {"url": f"/api/files/{path}"}
 
 
 @api.get("/files/{path:path}")
@@ -285,7 +179,10 @@ async def get_file(path: str):
     record = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})
     if not record:
         raise HTTPException(404, "Dosya bulunamadı")
-    data, ctype = await asyncio.to_thread(get_object, path)
+    try:
+        data, ctype = await asyncio.to_thread(read_file, path)
+    except FileNotFoundError:
+        raise HTTPException(404, "Dosya bulunamadı")
     return Response(content=data, media_type=record.get("content_type") or ctype, headers={"Cache-Control": "public, max-age=31536000"})
 
 
@@ -300,10 +197,8 @@ async def get_settings():
 async def put_settings(body: SettingsIn, request: Request):
     await require_admin(request)
     data = body.model_dump()
-    emails = [e.strip().lower() for e in data.pop("admin_emails") if e.strip()]
     data["i18n"] = await localize(data, await get_settings(), SETTINGS_KEYS)
     await db.meta.update_one({"key": "settings"}, {"$set": data}, upsert=True)
-    await db.meta.update_one({"key": "admins"}, {"$set": {"emails": emails}}, upsert=True)
     return await get_settings()
 
 
@@ -332,14 +227,6 @@ async def telegram_test(body: TelegramTestIn, request: Request):
     if not ok:
         raise HTTPException(400, "Mesaj gönderilemedi. Chat ID'yi ve botun bu sohbete ekli olduğunu kontrol edin.")
     return {"ok": True}
-
-
-@api.get("/admin/admins")
-async def get_admins(request: Request):
-    await require_admin(request)
-    owner = await db.meta.find_one({"key": "owner"}, {"_id": 0}) or {}
-    extra = await db.meta.find_one({"key": "admins"}, {"_id": 0}) or {}
-    return {"owner": owner.get("email", ""), "emails": extra.get("emails", [])}
 
 
 # ---------- Categories ----------
@@ -448,7 +335,7 @@ async def catalog_pdf(lang: str = "ru"):
     settings = await get_settings()
     cats = await db.categories.find({}, {"_id": 0}).sort([("order", 1), ("created_at", 1)]).to_list(200)
     items = await attach_category(await db.products.find({"active": True}, {"_id": 0}).sort([("order", 1), ("created_at", -1)]).to_list(500))
-    pdf = await asyncio.to_thread(build_catalog, settings, cats, items, lambda p: get_object(p)[0], lang)
+    pdf = await asyncio.to_thread(build_catalog, settings, cats, items, lambda p: read_file(p)[0], lang)
     name = slugify(settings.get("company_name") or "catalog")
     return Response(content=pdf, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{name}-catalog-{lang}.pdf"'})
@@ -503,8 +390,7 @@ async def notify_quote(doc: dict):
     chat_id = (settings.get("telegram_chat_id") or "").strip()
     if chat_id and os.environ.get("TELEGRAM_BOT_TOKEN"):
         await send_telegram(chat_id, quote_telegram_text(doc, settings.get("company_name") or ""))
-    owner = await db.meta.find_one({"key": "owner"}, {"_id": 0}) or {}
-    to = (settings.get("notification_email") or "").strip() or owner.get("email")
+    to = (settings.get("notification_email") or "").strip() or os.environ["ADMIN_EMAIL"]
     if not to:
         return
     subject = f"Yeni teklif talebi: {doc['name']}" + (f" — {doc['product_name']}" if doc.get("product_name") else "")
@@ -641,11 +527,7 @@ async def startup():
     app.state.index_task = asyncio.create_task(ensure_indexes())
     await seed()
     await migrate_order()
-    try:
-        await asyncio.to_thread(init_storage)
-        logger.info("Storage initialized")
-    except Exception as e:
-        logger.error(f"Storage init failed: {e}")
+    await seed_admin()
 
 
 @app.on_event("shutdown")
