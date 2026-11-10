@@ -1,4 +1,5 @@
 import axios from "axios";
+import { trErr } from "@/pages/admin/adminI18n";
 
 export const BACKEND = process.env.REACT_APP_BACKEND_URL;
 export const api = axios.create({ baseURL: `${BACKEND}/api`, withCredentials: true });
@@ -20,5 +21,5 @@ api.interceptors.response.use(undefined, async (error) => {
 const detailText = (d) => (typeof d === "string" ? d : Array.isArray(d) ? d.map((x) => x?.msg).filter(Boolean).join(" ") : d?.msg);
 export const img = (u) => (!u ? "" : u.startsWith("/api") ? `${BACKEND}${u}` : u);
 export const asList = (d) => (Array.isArray(d) ? d : []);
-export const errMsg = (e, fallback = "Bir hata oluştu") => detailText(e?.response?.data?.detail) || fallback;
+export const errMsg = (e, fallback = "Bir hata oluştu") => trErr(detailText(e?.response?.data?.detail) || fallback);
 export const EASE = [0.16, 1, 0.3, 1];

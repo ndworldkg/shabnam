@@ -1,6 +1,8 @@
 import { Phone, Mail, MapPin, Clock, MessageCircle } from "lucide-react";
 import { PageHeader } from "@/components/site/PageHeader";
 import { ContactForm } from "@/components/site/ContactForm";
+import { SocialLinks } from "@/components/site/SocialLinks";
+import { MapEmbed } from "@/components/site/MapEmbed";
 import { Reveal } from "@/components/site/Reveal";
 import { useSite } from "@/context/SettingsContext";
 import { useLang } from "@/i18n/LangContext";
@@ -38,6 +40,8 @@ export default function Contact() {
             })}
           </div>
           {settings?.about && <p className="mt-8 text-slate-300">{loc(settings, "about")}</p>}
+          <p className="mb-3 mt-8 font-mono text-xs uppercase tracking-[0.25em] text-[#FACC15]">{P.social}</p>
+          <SocialLinks id="contact" />
         </Reveal>
         <Reveal className="lg:col-span-7" delay={0.1}>
           <div className="rounded-[24px] border border-white/10 bg-[#131924] p-6 md:p-10">
@@ -46,6 +50,7 @@ export default function Contact() {
           </div>
         </Reveal>
       </section>
+      <MapEmbed />
     </main>
   );
 }

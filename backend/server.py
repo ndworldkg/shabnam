@@ -20,7 +20,6 @@ load_dotenv(ROOT_DIR / '.env')
 
 from email_service import send_email, quote_email_html  # noqa: E402
 from catalog_pdf import build_catalog  # noqa: E402
-from translator import localize, PRODUCT_KEYS, CATEGORY_KEYS, SETTINGS_KEYS  # noqa: E402
 from telegram_service import send_telegram, recent_chats, quote_telegram_text  # noqa: E402
 from storage import save_file, read_file  # noqa: E402
 from auth import build_auth  # noqa: E402
@@ -155,6 +154,11 @@ class SettingsIn(BaseModel):
     address: str = ""
     whatsapp: str = ""
     working_hours: str = ""
+    map_location: str = ""
+    instagram: str = ""
+    telegram: str = ""
+    facebook: str = ""
+    tiktok: str = ""
     notification_email: str = ""
     telegram_chat_id: str = ""
     i18n: dict = {}
@@ -173,12 +177,23 @@ DEFAULT_SETTINGS = {
     "address": "[Fabrika / atölye adresi]",
     "whatsapp": "",
     "working_hours": "[Çalışma saatleri]",
+    "map_location": "Toshkent shahar, Chilonzor tumani, 85-uy",
+    "instagram": "",
+    "telegram": "",
+    "facebook": "",
+    "tiktok": "",
     "notification_email": "",
     "telegram_chat_id": "",
 }
 
 
 # ---------- Files ----------
+@api.get("/health")
+async def health():
+    await db.command("ping")
+    return {"ok": True}
+
+
 @api.post("/upload")
 async def upload(request: Request, file: UploadFile = File(...)):
     user = await require_admin(request)
@@ -219,7 +234,6 @@ async def get_settings():
 async def put_settings(body: SettingsIn, request: Request):
     await require_admin(request)
     data = body.model_dump()
-    data["i18n"] = await localize(data, await get_settings(), SETTINGS_KEYS)
     await db.meta.update_one({"key": "settings"}, {"$set": data}, upsert=True)
     return await get_settings()
 
@@ -270,7 +284,6 @@ async def list_categories():
 async def create_category(body: CategoryIn, request: Request):
     await require_admin(request)
     data = prep_category(body)
-    data["i18n"] = await localize(data, None, CATEGORY_KEYS)
     doc = {"id": str(uuid.uuid4()), "slug": slugify(body.name), "created_at": now_iso(), **data}
     await db.categories.insert_one(doc)
     doc.pop("_id", None)
@@ -284,7 +297,6 @@ async def update_category(cid: str, body: CategoryIn, request: Request):
     if not old:
         raise HTTPException(404, "Kategori bulunamadı")
     data = prep_category(body)
-    data["i18n"] = await localize(data, old, CATEGORY_KEYS)
     await db.categories.update_one({"id": cid}, {"$set": {**data, "slug": slugify(body.name)}})
     return await db.categories.find_one({"id": cid}, {"_id": 0})
 
@@ -336,21 +348,6 @@ async def reorder_products(body: ReorderIn, request: Request):
     return {"ok": True}
 
 
-@api.post("/admin/translate-missing")
-async def translate_missing(request: Request):
-    await require_admin(request)
-    n = 0
-    for coll, keys in ((db.categories, CATEGORY_KEYS), (db.products, PRODUCT_KEYS)):
-        async for d in coll.find({}, {"_id": 0}):
-            i18n = await localize(d, d, keys)
-            if i18n != d.get("i18n"):
-                await coll.update_one({"id": d["id"]}, {"$set": {"i18n": i18n}})
-                n += 1
-    s = await get_settings()
-    await db.meta.update_one({"key": "settings"}, {"$set": {"i18n": await localize(s, s, SETTINGS_KEYS)}}, upsert=True)
-    return {"updated": n}
-
-
 @api.get("/catalog.pdf")
 async def catalog_pdf(lang: str = "ru"):
     lang = lang if lang in ("ru", "uz") else "ru"
@@ -376,7 +373,6 @@ async def create_product(body: ProductIn, request: Request):
     await require_admin(request)
     first = await db.products.find_one({}, {"_id": 0, "order": 1}, sort=[("order", 1)])
     data = prep_product(body)
-    data["i18n"] = await localize(data, None, PRODUCT_KEYS)
     doc = {"id": str(uuid.uuid4()), "created_at": now_iso(), "updated_at": now_iso(), "order": (first or {}).get("order", 0) - 1,
            **data}
     await db.products.insert_one(doc)
@@ -391,7 +387,6 @@ async def update_product(pid: str, body: ProductIn, request: Request):
     if not old:
         raise HTTPException(404, "Ürün bulunamadı")
     data = prep_product(body)
-    data["i18n"] = await localize(data, old, PRODUCT_KEYS)
     await db.products.update_one({"id": pid}, {"$set": {**data, "updated_at": now_iso()}})
     return await db.products.find_one({"id": pid}, {"_id": 0})
 

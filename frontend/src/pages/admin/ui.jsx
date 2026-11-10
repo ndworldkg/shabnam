@@ -1,3 +1,5 @@
+import { adminLang } from "@/pages/admin/adminI18n";
+
 export const aInput = "w-full rounded-lg border border-white/15 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-[#F2962B]";
 
 export const AField = ({ label, children, className = "" }) => (
@@ -22,4 +24,4 @@ export const PrimaryBtn = ({ children, className = "", ...p }) => (
 );
 
 export const toList = (s) => s.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
-export const fmtDate = (s) => (s ? new Date(s).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }) : "");
+export const fmtDate = (s) => (s ? new Date(s).toLocaleString(adminLang() === "ru" ? "ru-RU" : "tr-TR", { dateStyle: "medium", timeStyle: "short" }) : "");

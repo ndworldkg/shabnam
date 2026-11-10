@@ -1,0 +1,69 @@
+name: shabnam-elegant
+
+# Hostinger Docker Manager: bu dosya depo kök dizininde olmalıdır.
+# Değişkenler Docker Manager > Proje > Environment bölümünden (veya .env dosyasından) gelir.
+# Tam liste: deploy/env.example  |  Kurulum rehberi: deploy/KURULUM.md
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      DB_NAME: ${DB_NAME:-shabnam}
+      SOURCE_DB: test_database
+    volumes:
+      - mongo_data:/data/db
+      - ./deploy/data:/restore:ro
+      - ./deploy/mongo-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "mongodb://mongo:27017/admin", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      DB_NAME: ${DB_NAME:-shabnam}
+      STORAGE_BACKEND: mongo
+      CORS_ORIGINS: https://${DOMAIN:?DOMAIN gerekli}
+      PUBLIC_SITE_URL: https://${DOMAIN}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL gerekli}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD gerekli}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET gerekli}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-Shabnam Elegant}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_BACKEND_URL: https://${DOMAIN}
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+  caddy_data:
+  caddy_config:

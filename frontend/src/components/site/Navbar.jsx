@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 import { useSite } from "@/context/SettingsContext";
 import { useLang } from "@/i18n/LangContext";
 import { LangSwitch } from "@/components/site/LangSwitch";
+import { SocialLinks } from "@/components/site/SocialLinks";
 
 const LINKS = [
   { to: "/", id: "home" },
@@ -54,6 +55,7 @@ export const Navbar = () => {
                 {t.nav[l.id]}
               </Link>
             ))}
+            <SocialLinks id="mobile-nav" className="px-6 py-5" />
           </motion.nav>
         )}
       </AnimatePresence>

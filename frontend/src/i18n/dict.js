@@ -31,7 +31,7 @@ export const DICT = {
     catalog: { eyebrow: "Каталог продукции", lines: ["Вся", "коллекция"], all: "Все", search: "Поиск по названию или коду", loading: "Загрузка...", count: "товаров", empty: "По заданным критериям товары не найдены.", pdf: "Скачать PDF-каталог" },
     detail: { back: "Назад в каталог", code: "Код", fabric: "Ткань", weight: "Плотность", sizes: "Размеры", colors: "Цвета", quoteBtn: "Запросить цену на этот товар", formEyebrow: "Форма запроса", formTitle: "Узнайте цену: ", related: "Из этой же категории", notFound: "Товар не найден.", loading: "Загрузка..." },
     quotePage: { eyebrow: "Запрос цены", lines: ["Для вашей", "команды"], notes: ["Укажите модель и количество", "Отметьте нанесение логотипа", "Мы ответим с индивидуальной ценой"] },
-    contactPage: { eyebrow: "Контакты", lines: ["Поговорим —", "и сошьём."], phone: "Телефон", email: "E-mail", address: "Адрес", hours: "Часы работы", whatsapp: "WhatsApp", sendTitle: "Напишите нам" },
+    contactPage: { eyebrow: "Контакты", lines: ["Поговорим —", "и сошьём."], phone: "Телефон", email: "E-mail", address: "Адрес", hours: "Часы работы", whatsapp: "WhatsApp", sendTitle: "Напишите нам", map: "Мы на карте", openMap: "Открыть в Google Maps", social: "Мы в соцсетях" },
     form: {
       name: "Имя и фамилия *", company: "Компания", email: "E-mail *", phone: "Телефон *", product: "Товар", general: "Общий запрос / несколько товаров",
       qty: "Примерное количество", embroidery: "Нужна вышивка / печать логотипа", message: "Ваше сообщение", msgPh: "Размерный ряд, цвет, срок поставки...",
@@ -39,7 +39,7 @@ export const DICT = {
       phoneOpt: "Телефон", subject: "Тема", messageReq: "Сообщение *", send: "Отправить", contactOk: "Сообщение отправлено.", contactSuccess: "Сообщение получено, спасибо.", contactErr: "Не удалось отправить сообщение.",
       tooMany: "Слишком много запросов, попробуйте немного позже.",
     },
-    footer: { categories: "Категории", contact: "Контакты", rights: "Все права защищены.", admin: "Панель управления" },
+    footer: { categories: "Категории", contact: "Контакты", rights: "Все права защищены.", follow: "Мы в соцсетях" },
     wa: { label: "Написать в WhatsApp", msg: (n) => `Здравствуйте, ${n}! Хочу узнать подробнее о вашей продукции.` },
   },
   uz: {
@@ -69,7 +69,7 @@ export const DICT = {
     catalog: { eyebrow: "Mahsulotlar katalogi", lines: ["Butun", "to'plam"], all: "Barchasi", search: "Nomi yoki kodi bo'yicha qidirish", loading: "Yuklanmoqda...", count: "ta mahsulot", empty: "Ushbu mezonlarga mos mahsulot topilmadi.", pdf: "PDF katalogni yuklab olish" },
     detail: { back: "Katalogga qaytish", code: "Kod", fabric: "Mato", weight: "Zichlik", sizes: "O'lchamlar", colors: "Ranglar", quoteBtn: "Ushbu mahsulot narxini so'rash", formEyebrow: "So'rov formasi", formTitle: "Narxini bilib oling: ", related: "Shu kategoriyadan", notFound: "Mahsulot topilmadi.", loading: "Yuklanmoqda..." },
     quotePage: { eyebrow: "Narx so'rash", lines: ["Jamoangiz", "uchun taklif"], notes: ["Model va miqdorni yozing", "Logotip tushirishni belgilang", "Sizga maxsus narx bilan javob beramiz"] },
-    contactPage: { eyebrow: "Aloqa", lines: ["Gaplashamiz,", "tikamiz."], phone: "Telefon", email: "E-pochta", address: "Manzil", hours: "Ish vaqti", whatsapp: "WhatsApp", sendTitle: "Bizga yozing" },
+    contactPage: { eyebrow: "Aloqa", lines: ["Gaplashamiz,", "tikamiz."], phone: "Telefon", email: "E-pochta", address: "Manzil", hours: "Ish vaqti", whatsapp: "WhatsApp", sendTitle: "Bizga yozing", map: "Xaritada", openMap: "Google Maps'da ochish", social: "Ijtimoiy tarmoqlarda" },
     form: {
       name: "Ism va familiya *", company: "Kompaniya", email: "E-pochta *", phone: "Telefon *", product: "Mahsulot", general: "Umumiy so'rov / bir nechta mahsulot",
       qty: "Taxminiy miqdor", embroidery: "Logotip kashtasi / bosma kerak", message: "Xabaringiz", msgPh: "O'lchamlar, rang, yetkazish muddati...",
@@ -77,7 +77,7 @@ export const DICT = {
       phoneOpt: "Telefon", subject: "Mavzu", messageReq: "Xabar *", send: "Yuborish", contactOk: "Xabaringiz yuborildi.", contactSuccess: "Xabaringiz qabul qilindi, rahmat.", contactErr: "Xabarni yuborib bo'lmadi.",
       tooMany: "So'rovlar juda ko'p, birozdan so'ng qayta urinib ko'ring.",
     },
-    footer: { categories: "Kategoriyalar", contact: "Aloqa", rights: "Barcha huquqlar himoyalangan.", admin: "Boshqaruv paneli" },
+    footer: { categories: "Kategoriyalar", contact: "Aloqa", rights: "Barcha huquqlar himoyalangan.", follow: "Ijtimoiy tarmoqlarda" },
     wa: { label: "WhatsApp orqali yozish", msg: (n) => `Assalomu alaykum, ${n}! Mahsulotlaringiz haqida ma'lumot olmoqchiman.` },
   },
 };

@@ -14,6 +14,7 @@ import Quote from "@/pages/Quote";
 import Contact from "@/pages/Contact";
 import AdminApp from "@/pages/admin/AdminApp";
 import ResetPassword from "@/pages/admin/ResetPassword";
+import { AdminLangProvider } from "@/pages/admin/adminI18n";
 
 const SiteLayout = () => (
   <div className="grain min-h-screen bg-[#0B0F17]">
@@ -35,8 +36,10 @@ function AppRouter() {
         <Route path="/iletisim" element={<Contact />} />
         <Route path="*" element={<Home />} />
       </Route>
-      <Route path="/admin" element={<AdminApp />} />
-      <Route path="/admin/sifre-sifirla" element={<ResetPassword />} />
+      <Route element={<AdminLangProvider><Outlet /></AdminLangProvider>}>
+        <Route path="/admin" element={<AdminApp />} />
+        <Route path="/admin/sifre-sifirla" element={<ResetPassword />} />
+      </Route>
     </Routes>
   );
 }

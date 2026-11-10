@@ -8,16 +8,19 @@ import { ImageUploader } from "@/pages/admin/ImageUploader";
 import { AdminTitle, AField, aInput, PrimaryBtn, toList } from "@/pages/admin/ui";
 import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
 import { SpecFieldsEditor } from "@/pages/admin/SpecFieldsEditor";
+import { useAdminLang } from "@/pages/admin/adminI18n";
 
-const trFields = (specs) => [
-  { k: "name", label: "Kategori adı", type: "text" }, { k: "description", label: "Açıklama", type: "text" },
-  ...specs.filter((s) => s.label).map((s) => ({ k: "spec_labels", sub: s.key, label: `Alan: ${s.label}`, type: "text" })),
+const trFields = (specs, C) => [
+  { k: "name", label: C.name, type: "text" }, { k: "description", label: C.desc, type: "text" },
+  ...specs.filter((s) => s.label).map((s) => ({ k: "spec_labels", sub: s.key, label: C.specField(s.label), type: "text" })),
 ];
 
 const COLORS = ["#F2962B", "#FACC15", "#3B82F6", "#10B981", "#EC4899", "#A78BFA", "#F97316", "#22D3EE"];
 const BLANK = { name: "", description: "", image: "", accent: "#F2962B", order: 0, spec_fields: [], sizes: "", i18n: {} };
 
 export default function AdminCategories({ onChange }) {
+  const { t } = useAdminLang();
+  const C = t.categories;
   const { categories, reload } = useSite();
   const [f, setF] = useState(BLANK);
   const [editId, setEditId] = useState(null);
@@ -38,7 +41,7 @@ export default function AdminCategories({ onChange }) {
         spec_fields: f.spec_fields.filter((s) => s.label.trim()).map((s) => ({ key: s.key, label: s.label.trim() })), i18n: cleanI18n(f.i18n) };
       if (editId) await api.put(`/categories/${editId}`, body);
       else await api.post("/categories", body);
-      toast.success("Kategori kaydedildi");
+      toast.success(C.saved);
       setOpen(false);
       reload();
       onChange?.();
@@ -49,10 +52,10 @@ export default function AdminCategories({ onChange }) {
     }
   };
   const del = async (c) => {
-    if (!window.confirm(`"${c.name}" kategorisi silinsin mi?`)) return;
+    if (!window.confirm(t.common.confirmDelete(c.name))) return;
     try {
       await api.delete(`/categories/${c.id}`);
-      toast.success("Kategori silindi");
+      toast.success(C.deleted);
       reload();
     } catch (e) {
       toast.error(errMsg(e));
@@ -61,8 +64,8 @@ export default function AdminCategories({ onChange }) {
 
   return (
     <div data-testid="admin-categories">
-      <AdminTitle title="Kategoriler" sub="Sıra numarası küçük olan önce gösterilir"
-        action={<PrimaryBtn onClick={() => openFor(null)} data-testid="admin-add-category-button"><Plus className="h-4 w-4" /> Yeni Kategori</PrimaryBtn>} />
+      <AdminTitle title={C.title} sub={C.sub}
+        action={<PrimaryBtn onClick={() => openFor(null)} data-testid="admin-add-category-button"><Plus className="h-4 w-4" /> {C.add}</PrimaryBtn>} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((c) => (
           <div key={c.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#131924]" data-testid={`admin-category-${c.slug}`}>
@@ -73,7 +76,7 @@ export default function AdminCategories({ onChange }) {
             <div className="flex items-center gap-2 p-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{c.name}</p>
-                <p className="text-xs text-slate-400">Sıra {c.order} · {c.product_count} ürün · {(c.spec_fields || []).length} özellik alanı</p>
+                <p className="text-xs text-slate-400">{C.meta(c.order, c.product_count, (c.spec_fields || []).length)}</p>
               </div>
               <button onClick={() => openFor(c)} className="rounded-lg p-2 text-slate-300 hover:bg-white/10" data-testid={`admin-edit-category-${c.slug}`}><Pencil className="h-4 w-4" /></button>
               <button onClick={() => del(c)} className="rounded-lg p-2 text-slate-300 hover:bg-red-500/15 hover:text-red-400" data-testid={`admin-delete-category-${c.slug}`}><Trash2 className="h-4 w-4" /></button>
@@ -83,13 +86,13 @@ export default function AdminCategories({ onChange }) {
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto border-white/10 bg-[#131924] text-white" data-testid="category-dialog">
-          <DialogHeader><DialogTitle className="font-display text-2xl font-black uppercase">{editId ? "Kategoriyi Düzenle" : "Yeni Kategori"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display text-2xl font-black uppercase">{editId ? C.edit : C.create}</DialogTitle></DialogHeader>
           <form onSubmit={save} className="grid gap-4">
-            <AField label="Kapak fotoğrafı"><ImageUploader multiple={false} value={f.image ? [f.image] : []} onChange={(v) => setF({ ...f, image: v[0] || "" })} testid="category-image" /></AField>
-            <AField label="Kategori adı *"><input required className={aInput} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} data-testid="category-name-input" /></AField>
-            <AField label="Açıklama"><input className={aInput} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} data-testid="category-description-input" /></AField>
-            <AField label="Sıra"><input type="number" className={aInput} value={f.order} onChange={(e) => setF({ ...f, order: e.target.value })} data-testid="category-order-input" /></AField>
-            <AField label="Vurgu rengi">
+            <AField label={C.cover}><ImageUploader multiple={false} value={f.image ? [f.image] : []} onChange={(v) => setF({ ...f, image: v[0] || "" })} testid="category-image" /></AField>
+            <AField label={`${C.name} *`}><input required className={aInput} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} data-testid="category-name-input" /></AField>
+            <AField label={C.desc}><input className={aInput} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} data-testid="category-description-input" /></AField>
+            <AField label={C.order}><input type="number" className={aInput} value={f.order} onChange={(e) => setF({ ...f, order: e.target.value })} data-testid="category-order-input" /></AField>
+            <AField label={C.accent}>
               <div className="flex flex-wrap gap-2">
                 {COLORS.map((c) => (
                   <button type="button" key={c} onClick={() => setF({ ...f, accent: c })} data-testid={`category-color-${c.slice(1)}`}
@@ -98,9 +101,10 @@ export default function AdminCategories({ onChange }) {
               </div>
             </AField>
             <SpecFieldsEditor fields={f.spec_fields} sizes={f.sizes}
-              onChange={(p) => setF((s) => ({ ...s, ...(p.fields ? { spec_fields: p.fields } : {}), ...(p.sizes !== undefined ? { sizes: p.sizes } : {}) }))} />
-            <TranslationFields value={f.i18n} onChange={(i18n) => setF({ ...f, i18n })} fields={trFields(f.spec_fields)} testid="category-i18n" />
-            <div className="flex justify-end"><PrimaryBtn type="submit" disabled={busy} data-testid="category-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Kaydet</PrimaryBtn></div>
+              onChange={(p) => setF((s) => ({ ...s, ...(p.fields ? { spec_fields: p.fields } : {}), ...(p.sizes !== undefined ? { sizes: p.sizes } : {}),
+                ...(p.labels ? { i18n: Object.fromEntries(["ru", "uz"].map((l) => [l, { ...(s.i18n?.[l] || {}), spec_labels: p.labels[l] }])) } : {}) }))} />
+            <TranslationFields value={f.i18n} onChange={(i18n) => setF({ ...f, i18n })} fields={trFields(f.spec_fields, C)} testid="category-i18n" />
+            <div className="flex justify-end"><PrimaryBtn type="submit" disabled={busy} data-testid="category-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} {t.common.save}</PrimaryBtn></div>
           </form>
         </DialogContent>
       </Dialog>

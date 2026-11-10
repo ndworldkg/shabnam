@@ -3,8 +3,11 @@ import { toast } from "sonner";
 import { Loader2, Send, Search } from "lucide-react";
 import { api, asList, errMsg } from "@/lib/api";
 import { AField, aInput } from "@/pages/admin/ui";
+import { useAdminLang } from "@/pages/admin/adminI18n";
 
 export const TelegramSettings = ({ value, onChange }) => {
+  const { t } = useAdminLang();
+  const T = t.telegram;
   const [chats, setChats] = useState(null);
   const [busy, setBusy] = useState("");
 
@@ -14,7 +17,7 @@ export const TelegramSettings = ({ value, onChange }) => {
       const r = await api.get("/admin/telegram/chats");
       const list = asList(r.data);
       setChats(list);
-      if (!list.length) toast.info("Sohbet bulunamadı. Önce bota Telegram'dan bir mesaj yazın, sonra tekrar deneyin.");
+      if (!list.length) toast.info(T.notFound);
     } catch (e) {
       toast.error(errMsg(e));
     } finally {
@@ -25,7 +28,7 @@ export const TelegramSettings = ({ value, onChange }) => {
     setBusy("test");
     try {
       await api.post("/admin/telegram/test", { chat_id: value });
-      toast.success("Test mesajı gönderildi. Kaydetmeyi unutmayın.");
+      toast.success(T.sent);
     } catch (e) {
       toast.error(errMsg(e));
     } finally {
@@ -35,20 +38,20 @@ export const TelegramSettings = ({ value, onChange }) => {
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 sm:col-span-2" data-testid="telegram-settings">
-      <p className="mb-1 text-sm font-semibold">Telegram bildirimleri</p>
-      <p className="mb-4 text-xs text-slate-400">Botunuza Telegram'dan bir mesaj yazın (veya botu grubunuza ekleyin), sonra "Sohbeti bul" butonuna basın.</p>
+      <p className="mb-1 text-sm font-semibold">{T.title}</p>
+      <p className="mb-4 text-xs text-slate-400">{T.help}</p>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <AField label="Telegram Chat ID" className="flex-1">
-          <input className={aInput} value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder="Örn. 123456789" data-testid="settings-telegram-chat-input" />
+        <AField label={T.chatId} className="flex-1">
+          <input className={aInput} value={value || ""} onChange={(e) => onChange(e.target.value)} placeholder={T.ph} data-testid="settings-telegram-chat-input" />
         </AField>
         <div className="flex gap-2 sm:items-end">
           <button type="button" onClick={find} disabled={!!busy} data-testid="telegram-find-chat-button"
             className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3.5 py-2.5 text-sm hover:border-[#FACC15]">
-            {busy === "find" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Sohbeti bul
+            {busy === "find" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} {T.find}
           </button>
           <button type="button" onClick={test} disabled={!!busy || !value} data-testid="telegram-test-button"
             className="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3.5 py-2.5 text-sm hover:border-[#FACC15] disabled:opacity-50">
-            {busy === "test" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Test
+            {busy === "test" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} {T.test}
           </button>
         </div>
       </div>

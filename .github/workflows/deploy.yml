@@ -1,0 +1,24 @@
+# GitHub'a her gönderimde (push) siteyi Hostinger VPS'te otomatik günceller.
+# İsteğe bağlıdır: aşağıdaki ayarlar yapılmadıysa bu iş atlanır, hata vermez.
+# Kurulum: deploy/KURULUM.md > "Otomatik güncelleme (GitHub Actions)"
+name: Hostinger VPS'e yayınla
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ vars.HOSTINGER_VM_ID != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Hostinger Docker Manager ile yayınla
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          api-key: ${{ secrets.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
+          project-name: shabnam-elegant
+          docker-compose-path: docker-compose.yml
+          environment-variables: ${{ secrets.APP_ENV }}

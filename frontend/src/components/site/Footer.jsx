@@ -3,6 +3,7 @@ import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { LogoMark } from "@/components/Logo";
 import { useSite } from "@/context/SettingsContext";
 import { CatalogDownload } from "@/components/site/CatalogDownload";
+import { SocialLinks } from "@/components/site/SocialLinks";
 import { useLang } from "@/i18n/LangContext";
 
 export const Footer = () => {
@@ -22,6 +23,8 @@ export const Footer = () => {
           <LogoMark className="h-14 w-auto" />
           <p className="mt-6 max-w-sm text-slate-400">{loc(settings, "tagline")}</p>
           <CatalogDownload testid="footer-catalog-pdf" className="mt-8" />
+          <p className="mb-3 mt-10 font-mono text-xs uppercase tracking-[0.25em] text-[#FACC15]">{t.footer.follow}</p>
+          <SocialLinks id="footer" />
         </div>
         <div className="md:col-span-3">
           <p className="mb-4 font-mono text-xs uppercase tracking-[0.25em] text-[#FACC15]">{t.footer.categories}</p>
@@ -45,7 +48,6 @@ export const Footer = () => {
       </p>
       <div className="mx-auto flex max-w-[1400px] flex-col justify-between gap-3 border-t border-white/10 px-5 py-6 text-xs text-slate-400 sm:flex-row sm:px-8">
         <span>© {year} {settings?.company_name}. {t.footer.rights}</span>
-        <Link to="/admin" className="hover:text-white" data-testid="footer-admin-link">{t.footer.admin}</Link>
       </div>
     </footer>
   );
