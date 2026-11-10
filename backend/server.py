@@ -38,6 +38,8 @@ INDEXES = {
     "messages": [IndexModel([("id", ASCENDING)], name="id", unique=True), IndexModel([("created_at", DESCENDING)], name="created_desc")],
     "users": [IndexModel([("email", ASCENDING)], name="email", unique=True), IndexModel([("id", ASCENDING)], name="uid")],
     "login_attempts": [IndexModel([("identifier", ASCENDING)], name="identifier")],
+    "password_reset_tokens": [IndexModel([("expires_at", ASCENDING)], name="ttl", expireAfterSeconds=0),
+                              IndexModel([("token_hash", ASCENDING)], name="token_hash")],
     "files": [IndexModel([("storage_path", ASCENDING)], name="path")],
     "meta": [IndexModel([("key", ASCENDING)], name="key", unique=True)],
 }
@@ -54,7 +56,7 @@ async def ensure_indexes() -> None:
 
 app = FastAPI()
 api = APIRouter(prefix="/api")
-auth_router, require_admin, seed_admin = build_auth(db)
+auth_router, require_admin, seed_admin = build_auth(db, send_email)
 api.include_router(auth_router)
 APP_NAME = "shabnam-elegant"
 

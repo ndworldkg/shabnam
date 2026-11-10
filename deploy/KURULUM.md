@@ -39,7 +39,8 @@ docker compose restart backend
 Yedekten veri aktardıysanız, yedekteki yöneticinin şifresi geçerlidir. Panelde
 Firma Bilgileri → **Şifre değiştir** ile değiştirin.
 
-Şifreyi unutursanız:
+Şifreyi unutursanız giriş ekranındaki **"Şifremi unuttum"** bağlantısını kullanın; sıfırlama bağlantısı
+`ADMIN_EMAIL` adresine gelir (SMTP ayarlarının doğru olması gerekir). E-posta çalışmıyorsa sunucuda:
 ```bash
 docker compose exec backend python reset_admin_password.py yeni-sifre
 ```

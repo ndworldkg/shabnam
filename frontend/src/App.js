@@ -13,6 +13,7 @@ import ProductDetail from "@/pages/ProductDetail";
 import Quote from "@/pages/Quote";
 import Contact from "@/pages/Contact";
 import AdminApp from "@/pages/admin/AdminApp";
+import ResetPassword from "@/pages/admin/ResetPassword";
 
 const SiteLayout = () => (
   <div className="grain min-h-screen bg-[#0B0F17]">
@@ -35,6 +36,7 @@ function AppRouter() {
         <Route path="*" element={<Home />} />
       </Route>
       <Route path="/admin" element={<AdminApp />} />
+      <Route path="/admin/sifre-sifirla" element={<ResetPassword />} />
     </Routes>
   );
 }

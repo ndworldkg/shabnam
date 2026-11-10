@@ -7,6 +7,7 @@ import AdminProducts from "@/pages/admin/AdminProducts";
 import AdminCategories from "@/pages/admin/AdminCategories";
 import { AdminQuotes, AdminMessages } from "@/pages/admin/AdminInbox";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import { ForgotPassword } from "@/pages/admin/ForgotPassword";
 
 const TABS = [
   { id: "products", label: "Ürünler", icon: Package, C: AdminProducts },
@@ -21,6 +22,7 @@ const Login = ({ onLogin }) => {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [forgot, setForgot] = useState(false);
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -35,6 +37,7 @@ const Login = ({ onLogin }) => {
     }
   };
   const inp = "w-full rounded-xl border border-white/15 bg-white/[0.04] px-4 py-3.5 text-white outline-none focus:border-[#F2962B]";
+  if (forgot) return <ForgotPassword onBack={() => setForgot(false)} />;
   return (
     <main className="hero-grid flex min-h-screen items-center justify-center bg-[#0B0F17] px-5" data-testid="admin-login-page">
       <form onSubmit={submit} className="w-full max-w-md rounded-[24px] border border-white/10 bg-[#131924] p-8 md:p-10" data-testid="admin-login-form">
@@ -47,6 +50,7 @@ const Login = ({ onLogin }) => {
         <label className="mt-4 block text-xs font-semibold uppercase tracking-wider text-slate-300">Şifre
           <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={`${inp} mt-1.5`} data-testid="admin-login-password" />
         </label>
+        <button type="button" onClick={() => setForgot(true)} className="mt-3 text-sm text-[#F7B267] hover:text-white" data-testid="admin-forgot-password-link">Şifremi unuttum</button>
         {error && <p className="mt-4 text-sm text-red-400" data-testid="admin-login-error">{error}</p>}
         <button type="submit" disabled={busy} data-testid="admin-login-submit"
           className="mt-8 flex w-full items-center justify-center gap-3 rounded-full bg-[#F2962B] px-6 py-4 font-semibold transition-colors hover:bg-[#F5A94E] disabled:opacity-60">

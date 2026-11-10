@@ -48,6 +48,9 @@ User choices: Firma adı "Shabnam elegant"; admin girişi Google ile; fotoğrafl
 - Translation: ANTHROPIC_API_KEY+ANTHROPIC_MODEL direct, else EMERGENT_LLM_KEY
 - deploy/: docker-compose (mongo + backend + Caddy auto-HTTPS serving React build), env.example, KURULUM.md (Turkish guide), export_data.py + data/shabnam.archive.gz (DB + images snapshot 2026-11-09)
 
+## Implemented (2026-11-10)
+- Forgot/reset password by email (link to /admin/sifre-sifirla, 1h single-use hashed token, TTL index, 3 requests/15min per IP, no user enumeration); PUBLIC_SITE_URL env
+
 ## Backlog
 - P1: Email notification on new quote/message; product drag-sort; PDF catalog download
 - P2: Multi-language (EN/AR), SEO meta per product, WhatsApp floating button
