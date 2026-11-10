@@ -1,0 +1,22 @@
+{
+  "summary": "Full backend + frontend testing of Shabnam Elegant feature pack: admin TR/RU i18n with ERR_RU mapping, removal of AI translation endpoint, settings fields (map_location, instagram, telegram, facebook, tiktok), public contact map embed, social links in contact/footer/mobile-nav, removal of public admin link. 9/9 backend tests pass, all critical frontend testids are present and functional (login lang switch, sidebar lang switch, RU error localization 'Неверный e-mail или пароль', localStorage admin_lang persistence after reload, settings-*-input for all 5 new fields, contact-map-section/iframe/open-link with Toshkent location in src, social-contact/footer/mobile-nav-{k} for all 4 networks, 0 /admin links on public site, mobile 390px menu works with socials visible). Translate-missing endpoint returns 405 as expected. Settings restored to originals after test.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_shabnam_backend.py",
+    "/app/test_reports/pytest/shabnam_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/server.py SettingsIn.i18n is dict = {} (mutable default) — Pydantic v2 copies per-instance so OK, but prefer Field(default_factory=dict) for clarity.",
+    "put_settings overwrites entire settings doc with $set of all fields on every save; if a field is missing from a client it falls back to SettingsIn defaults (empty strings) rather than preserving existing value. Observed working because the AdminSettings form always re-sends all fields, but this coupling is fragile.",
+    "MapEmbed iframe uses Google maps embed with q=map_location string — if user enters an unsafe string with quotes it may break the URL; consider encodeURIComponent (verify in /app/frontend/src/components/site/MapEmbed.jsx)."
+  ],
+  "updated_files": ["/app/backend/tests/test_shabnam_backend.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "test_admin@shabnam.test / TestAdmin123! (ensured in users collection, role=admin). erolsimsekg@gmail.com untouched.",
+  "seed_data_creation": "Ensured temporary test admin user test_admin@shabnam.test exists with password TestAdmin123! (role=admin). No products/categories created. Settings were temporarily modified during PUT test then restored to original values.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest at /app/backend/tests/test_shabnam_backend.py covers health, auth, settings CRUD, translate-missing removal, public endpoints. Run with: cd /app/backend && pytest tests/test_shabnam_backend.py -v. Admin test creds: test_admin@shabnam.test / TestAdmin123!. Public contact map/social testids verified present. Docker/compose not validated (no docker in container, out of scope per request)."
+}

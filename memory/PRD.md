@@ -45,13 +45,21 @@ User choices: Firma adı "Shabnam elegant"; admin girişi Google ile; fotoğrafl
 - Auth switched from Emergent Google to email+password JWT (auth.py; admin seeded from ADMIN_EMAIL/ADMIN_PASSWORD; brute-force lock 5/15min; change password in panel; reset_admin_password.py)
 - storage.py: Emergent object storage (preview) or MongoDB GridFS when STORAGE_BACKEND=mongo (VPS)
 - Email: SMTP when SMTP_HOST set, else Emergent-managed (preview)
-- Translation: ANTHROPIC_API_KEY+ANTHROPIC_MODEL direct, else EMERGENT_LLM_KEY
+- Translation: removed 2026-11-10 (manual only)
 - deploy/: docker-compose (mongo + backend + Caddy auto-HTTPS serving React build), env.example, KURULUM.md (Turkish guide), export_data.py + data/shabnam.archive.gz (DB + images snapshot 2026-11-09)
 
 ## Implemented (2026-11-10)
 - Forgot/reset password by email (link to /admin/sifre-sifirla, 1h single-use hashed token, TTL index, 3 requests/15min per IP, no user enumeration); PUBLIC_SITE_URL env
 - Per-category product attributes: category.spec_fields [{key,label}] + default_sizes + spec_labels (translated); product.specs {key: value} (translated per sub-key); presets Giyim/Ayakkabı/Şapka-Başlık/Eldiven; legacy fabric/weight migrated to specs; shown on detail page + PDF
 
+## Implemented (2026-11-10, Hostinger)
+- Admin panel TR/RU switch (adminI18n.jsx dict + AdminLangProvider, localStorage admin_lang); backend Turkish errors mapped to RU in errMsg
+- AI auto-translation REMOVED (translator.py deleted, /admin/translate-missing removed); RU/UZ texts typed manually, empty -> base text; spec presets carry ready tr/ru/uz labels
+- Contact page Google Maps embed (settings.map_location, default "Toshkent shahar, Chilonzor tumani, 85-uy"; address or Google Maps link)
+- Social links Instagram/Telegram/Facebook/TikTok (settings fields; footer, contact, mobile menu; empty = dimmed)
+- Public admin link removed (panel only via /admin)
+- Hostinger Docker Manager: root docker-compose.yml (env interpolation, mongo healthcheck, auto-restore deploy/data archive via deploy/mongo-init/restore.sh), /api/health, .github/workflows/deploy.yml (hostinger/deploy-on-vps, optional), KURULUM.md rewritten; archive re-exported 2026-11-10
+
 ## Backlog
-- P1: Email notification on new quote/message; product drag-sort; PDF catalog download
-- P2: Multi-language (EN/AR), SEO meta per product, WhatsApp floating button
+- P1: User deploys on Hostinger, fills SMTP + social links + exact map link in panel
+- P2: SEO meta per product, Telegram bot token
