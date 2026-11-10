@@ -138,14 +138,19 @@ def _product(c, p, y, fetch_storage, lang):
         c.drawString(tx, ty, line)
         ty -= 13
     ty -= 6
-    specs = [(t["fabric"], lo("fabric")), (t["weight"], lo("weight")), (t["sizes"], " · ".join(p.get("sizes") or [])),
-             (t["colors"], " · ".join(lo("colors") or [])), (t["features"], " · ".join(lo("features") or []))]
+    cat = p.get("category", {})
+    labels = _loc(cat, "spec_labels", lang) or {}
+    vals = lo("specs") or {}
+    base_vals = p.get("specs") or {}
+    specs = [(labels.get(f["key"]) or f["label"], vals.get(f["key"]) or base_vals.get(f["key"])) for f in cat.get("spec_fields") or []]
+    specs += [(t["sizes"], " · ".join(p.get("sizes") or [])),
+              (t["colors"], " · ".join(lo("colors") or [])), (t["features"], " · ".join(lo("features") or []))]
     for k, v in specs:
         if not v or ty < y - box_h + 16:
             continue
         c.setFont("Sans-Bold", 8.5)
         c.setFillColor(GREY)
-        c.drawString(tx, ty, k.upper())
+        c.drawString(tx, ty, str(k)[:16].upper())
         c.setFont("Sans", 9)
         c.setFillColor(DARK)
         c.drawString(tx + 76, ty, simpleSplit(v, "Sans", 9, tw - 76)[0])

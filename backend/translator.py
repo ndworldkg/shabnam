@@ -8,14 +8,15 @@ import uuid
 
 logger = logging.getLogger(__name__)
 LANGS = ("ru", "uz")
-PRODUCT_KEYS = ("name", "summary", "description", "fabric", "weight", "features", "colors")
-CATEGORY_KEYS = ("name", "description")
+PRODUCT_KEYS = ("name", "summary", "description", "specs", "features", "colors")
+CATEGORY_KEYS = ("name", "description", "spec_labels")
 SETTINGS_KEYS = ("tagline", "about", "address", "working_hours")
 
 SYSTEM = (
     "You are a professional translator for a workwear (iş elbisesi) manufacturer's product catalog. "
     "Translate the Turkish values of the given JSON object into Russian (ru) and Uzbek in Latin script (uz). "
-    "Keep the same keys; lists stay lists of the same length. Keep product codes, sizes, numbers, units and brand names unchanged. "
+    "Keep the same keys; lists stay lists of the same length; nested objects keep their inner keys unchanged (translate only values). "
+    "Keep product codes, sizes, numbers, units and brand names unchanged. "
     "If a value is a placeholder in square brackets, translate the text inside and keep the brackets. "
     'Reply with ONLY a JSON object: {"ru": {...}, "uz": {...}}.'
 )
@@ -43,29 +44,56 @@ async def translate(fields: dict) -> dict:
     return json.loads(match.group(0)) if match else {}
 
 
-async def localize(new: dict, old: dict | None, keys) -> dict:
-    """Return i18n dict for `new`; keeps manual edits, re-translates changed/missing fields."""
-    given = new.get("i18n") or {}
-    i18n = {lang: dict(given.get(lang) or {}) for lang in LANGS}
-    old_i18n = (old or {}).get("i18n") or {}
+def _flat(obj: dict, keys) -> dict:
+    out = {}
     for k in keys:
-        if not new.get(k):
-            for lang in LANGS:
-                i18n[lang].pop(k, None)
-            continue
-        if old is not None and new.get(k) != old.get(k):
-            for lang in LANGS:
-                if i18n[lang].get(k) == (old_i18n.get(lang) or {}).get(k):
-                    i18n[lang].pop(k, None)
-    missing = {k: new[k] for k in keys if new.get(k) and any(not i18n[lang].get(k) for lang in LANGS)}
+        v = (obj or {}).get(k)
+        if isinstance(v, dict):
+            out.update({f"{k}.{sk}": sv for sk, sv in v.items()})
+        elif k in (obj or {}):
+            out[k] = v
+    return out
+
+
+def _unflat(flat: dict) -> dict:
+    out = {}
+    for k, v in flat.items():
+        if "." in k:
+            p, s = k.split(".", 1)
+            out.setdefault(p, {})[s] = v
+        else:
+            out[k] = v
+    return out
+
+
+async def localize(new: dict, old: dict | None, keys) -> dict:
+    """Return i18n dict for `new`; keeps manual edits, re-translates changed/missing fields (dict values per sub-key)."""
+    given = new.get("i18n") or {}
+    old_i18n = (old or {}).get("i18n") or {}
+    new_f = _flat(new, keys)
+    old_f = _flat(old, keys) if old is not None else None
+    i18n = {lang: _flat(given.get(lang) or {}, keys) for lang in LANGS}
+    old_tr = {lang: _flat(old_i18n.get(lang) or {}, keys) for lang in LANGS}
+    extra = {lang: {k: v for k, v in (given.get(lang) or {}).items() if k not in keys} for lang in LANGS}
+    for lang in LANGS:
+        for k in list(i18n[lang]):
+            if not new_f.get(k):
+                i18n[lang].pop(k)
+    if old_f is not None:
+        for k, v in new_f.items():
+            if v != old_f.get(k):
+                for lang in LANGS:
+                    if i18n[lang].get(k) == old_tr[lang].get(k):
+                        i18n[lang].pop(k, None)
+    missing = {k: v for k, v in new_f.items() if v and any(not i18n[lang].get(k) for lang in LANGS)}
     if missing:
         try:
-            result = await translate(missing)
+            result = await translate(_unflat(missing))
         except Exception as e:
             logger.error(f"Translation failed: {e}")
             result = {}
         for lang in LANGS:
-            for k, v in (result.get(lang) or {}).items():
+            for k, v in _flat(result.get(lang) or {}, {k.split(".")[0] for k in missing}).items():
                 if k in missing and not i18n[lang].get(k) and v:
                     i18n[lang][k] = v
-    return i18n
+    return {lang: {**extra[lang], **_unflat(i18n[lang])} for lang in LANGS}

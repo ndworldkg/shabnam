@@ -6,6 +6,8 @@ const TABS = [{ code: "ru", label: "Rusça" }, { code: "uz", label: "Özbekçe" 
 
 const show = (f, v) => (Array.isArray(v) ? v.join(f.type === "lines" ? "\n" : ", ") : v || "");
 const parse = (f, raw) => (f.type === "lines" ? raw.split("\n") : f.type === "csv" ? raw.split(",") : raw);
+const getVal = (cur, f) => (f.sub ? cur[f.k]?.[f.sub] : cur[f.k]);
+const setVal = (cur, f, v) => (f.sub ? { ...cur, [f.k]: { ...(cur[f.k] || {}), [f.sub]: v } } : { ...cur, [f.k]: v });
 
 export const cleanI18n = (i18n = {}) =>
   Object.fromEntries(Object.entries(i18n).map(([l, obj]) => [l, Object.fromEntries(Object.entries(obj || {})
@@ -28,12 +30,12 @@ export const TranslationFields = ({ value = {}, onChange, fields, testid = "i18n
       <p className="mb-4 text-xs text-slate-400">Boş bırakılan alanlar kaydederken yapay zeka ile otomatik çevrilir. Türkçe metni değiştirirseniz, elle düzeltmediğiniz çeviriler yenilenir.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {fields.map((f) => (
-          <AField key={`${lang}-${f.k}`} label={f.label} className={f.type === "text" ? "" : "sm:col-span-2"}>
+          <AField key={`${lang}-${f.k}-${f.sub || ""}`} label={f.label} className={f.type === "text" ? "" : "sm:col-span-2"}>
             {f.type === "text" || f.type === "csv"
-              ? <input className={aInput} value={show(f, cur[f.k])} placeholder="Otomatik çevrilecek" data-testid={`${testid}-${lang}-${f.k}`}
-                  onChange={(e) => onChange({ ...value, [lang]: { ...cur, [f.k]: parse(f, e.target.value) } })} />
-              : <textarea rows={3} className={aInput} value={show(f, cur[f.k])} placeholder="Otomatik çevrilecek" data-testid={`${testid}-${lang}-${f.k}`}
-                  onChange={(e) => onChange({ ...value, [lang]: { ...cur, [f.k]: parse(f, e.target.value) } })} />}
+              ? <input className={aInput} value={show(f, getVal(cur, f))} placeholder="Otomatik çevrilecek" data-testid={`${testid}-${lang}-${f.k}${f.sub ? `-${f.sub}` : ""}`}
+                  onChange={(e) => onChange({ ...value, [lang]: setVal(cur, f, parse(f, e.target.value)) })} />
+              : <textarea rows={3} className={aInput} value={show(f, getVal(cur, f))} placeholder="Otomatik çevrilecek" data-testid={`${testid}-${lang}-${f.k}`}
+                  onChange={(e) => onChange({ ...value, [lang]: setVal(cur, f, parse(f, e.target.value)) })} />}
           </AField>
         ))}
       </div>

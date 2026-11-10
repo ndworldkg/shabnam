@@ -5,13 +5,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { api, img, errMsg } from "@/lib/api";
 import { useSite } from "@/context/SettingsContext";
 import { ImageUploader } from "@/pages/admin/ImageUploader";
-import { AdminTitle, AField, aInput, PrimaryBtn } from "@/pages/admin/ui";
+import { AdminTitle, AField, aInput, PrimaryBtn, toList } from "@/pages/admin/ui";
 import { TranslationFields, cleanI18n } from "@/pages/admin/TranslationFields";
+import { SpecFieldsEditor } from "@/pages/admin/SpecFieldsEditor";
 
-const TR_FIELDS = [{ k: "name", label: "Kategori adı", type: "text" }, { k: "description", label: "Açıklama", type: "text" }];
+const trFields = (specs) => [
+  { k: "name", label: "Kategori adı", type: "text" }, { k: "description", label: "Açıklama", type: "text" },
+  ...specs.filter((s) => s.label).map((s) => ({ k: "spec_labels", sub: s.key, label: `Alan: ${s.label}`, type: "text" })),
+];
 
 const COLORS = ["#F2962B", "#FACC15", "#3B82F6", "#10B981", "#EC4899", "#A78BFA", "#F97316", "#22D3EE"];
-const BLANK = { name: "", description: "", image: "", accent: "#F2962B", order: 0, i18n: {} };
+const BLANK = { name: "", description: "", image: "", accent: "#F2962B", order: 0, spec_fields: [], sizes: "", i18n: {} };
 
 export default function AdminCategories({ onChange }) {
   const { categories, reload } = useSite();
@@ -22,14 +26,16 @@ export default function AdminCategories({ onChange }) {
 
   const openFor = (c) => {
     setEditId(c?.id || null);
-    setF(c ? { name: c.name, description: c.description, image: c.image, accent: c.accent, order: c.order, i18n: c.i18n || {} } : { ...BLANK, order: categories.length });
+    setF(c ? { name: c.name, description: c.description, image: c.image, accent: c.accent, order: c.order, spec_fields: c.spec_fields || [], sizes: (c.default_sizes || []).join(", "), i18n: c.i18n || {} } : { ...BLANK, order: categories.length });
     setOpen(true);
   };
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
-      const body = { ...f, order: Number(f.order) || 0, i18n: cleanI18n(f.i18n) };
+      const { sizes, ...rest } = f;
+      const body = { ...rest, order: Number(f.order) || 0, default_sizes: toList(sizes),
+        spec_fields: f.spec_fields.filter((s) => s.label.trim()).map((s) => ({ key: s.key, label: s.label.trim() })), i18n: cleanI18n(f.i18n) };
       if (editId) await api.put(`/categories/${editId}`, body);
       else await api.post("/categories", body);
       toast.success("Kategori kaydedildi");
@@ -67,7 +73,7 @@ export default function AdminCategories({ onChange }) {
             <div className="flex items-center gap-2 p-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{c.name}</p>
-                <p className="text-xs text-slate-400">Sıra {c.order} · {c.product_count} ürün</p>
+                <p className="text-xs text-slate-400">Sıra {c.order} · {c.product_count} ürün · {(c.spec_fields || []).length} özellik alanı</p>
               </div>
               <button onClick={() => openFor(c)} className="rounded-lg p-2 text-slate-300 hover:bg-white/10" data-testid={`admin-edit-category-${c.slug}`}><Pencil className="h-4 w-4" /></button>
               <button onClick={() => del(c)} className="rounded-lg p-2 text-slate-300 hover:bg-red-500/15 hover:text-red-400" data-testid={`admin-delete-category-${c.slug}`}><Trash2 className="h-4 w-4" /></button>
@@ -91,7 +97,9 @@ export default function AdminCategories({ onChange }) {
                 ))}
               </div>
             </AField>
-            <TranslationFields value={f.i18n} onChange={(i18n) => setF({ ...f, i18n })} fields={TR_FIELDS} testid="category-i18n" />
+            <SpecFieldsEditor fields={f.spec_fields} sizes={f.sizes}
+              onChange={(p) => setF((s) => ({ ...s, ...(p.fields ? { spec_fields: p.fields } : {}), ...(p.sizes !== undefined ? { sizes: p.sizes } : {}) }))} />
+            <TranslationFields value={f.i18n} onChange={(i18n) => setF({ ...f, i18n })} fields={trFields(f.spec_fields)} testid="category-i18n" />
             <div className="flex justify-end"><PrimaryBtn type="submit" disabled={busy} data-testid="category-save-button">{busy && <Loader2 className="h-4 w-4 animate-spin" />} Kaydet</PrimaryBtn></div>
           </form>
         </DialogContent>

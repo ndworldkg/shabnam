@@ -74,13 +74,32 @@ def slugify(text: str) -> str:
 
 
 # ---------- Models ----------
+class SpecField(BaseModel):
+    key: str = Field(min_length=1)
+    label: str = Field(min_length=1)
+
+
 class CategoryIn(BaseModel):
     name: str = Field(min_length=1)
     description: str = ""
     image: str = ""
     accent: str = "#F2962B"
     order: int = 0
+    spec_fields: List[SpecField] = []
+    default_sizes: List[str] = []
     i18n: dict = {}
+
+
+def prep_category(body: CategoryIn) -> dict:
+    data = body.model_dump()
+    data["spec_labels"] = {f["key"]: f["label"] for f in data["spec_fields"]}
+    return data
+
+
+def prep_product(body) -> dict:
+    data = body.model_dump()
+    data["specs"] = {k: v.strip() for k, v in (data.get("specs") or {}).items() if isinstance(v, str) and v.strip()}
+    return data
 
 
 class ProductIn(BaseModel):
@@ -99,6 +118,7 @@ class ProductIn(BaseModel):
     active: bool = True
     price_from: Optional[float] = Field(default=None, ge=0)
     show_price: bool = False
+    specs: dict = {}
     i18n: dict = {}
 
 
@@ -249,7 +269,7 @@ async def list_categories():
 @api.post("/categories")
 async def create_category(body: CategoryIn, request: Request):
     await require_admin(request)
-    data = body.model_dump()
+    data = prep_category(body)
     data["i18n"] = await localize(data, None, CATEGORY_KEYS)
     doc = {"id": str(uuid.uuid4()), "slug": slugify(body.name), "created_at": now_iso(), **data}
     await db.categories.insert_one(doc)
@@ -263,7 +283,7 @@ async def update_category(cid: str, body: CategoryIn, request: Request):
     old = await db.categories.find_one({"id": cid}, {"_id": 0})
     if not old:
         raise HTTPException(404, "Kategori bulunamadı")
-    data = body.model_dump()
+    data = prep_category(body)
     data["i18n"] = await localize(data, old, CATEGORY_KEYS)
     await db.categories.update_one({"id": cid}, {"$set": {**data, "slug": slugify(body.name)}})
     return await db.categories.find_one({"id": cid}, {"_id": 0})
@@ -284,7 +304,7 @@ async def attach_category(products: list) -> list:
     for p in products:
         c = cats.get(p.get("category_id"), {})
         p["category"] = {"id": c.get("id", ""), "name": c.get("name", ""), "slug": c.get("slug", ""), "accent": c.get("accent", "#F2962B"),
-                        "i18n": c.get("i18n", {})}
+                        "spec_fields": c.get("spec_fields", []), "spec_labels": c.get("spec_labels", {}), "i18n": c.get("i18n", {})}
     return products
 
 
@@ -355,7 +375,7 @@ async def get_product(pid: str):
 async def create_product(body: ProductIn, request: Request):
     await require_admin(request)
     first = await db.products.find_one({}, {"_id": 0, "order": 1}, sort=[("order", 1)])
-    data = body.model_dump()
+    data = prep_product(body)
     data["i18n"] = await localize(data, None, PRODUCT_KEYS)
     doc = {"id": str(uuid.uuid4()), "created_at": now_iso(), "updated_at": now_iso(), "order": (first or {}).get("order", 0) - 1,
            **data}
@@ -370,7 +390,7 @@ async def update_product(pid: str, body: ProductIn, request: Request):
     old = await db.products.find_one({"id": pid}, {"_id": 0})
     if not old:
         raise HTTPException(404, "Ürün bulunamadı")
-    data = body.model_dump()
+    data = prep_product(body)
     data["i18n"] = await localize(data, old, PRODUCT_KEYS)
     await db.products.update_one({"id": pid}, {"$set": {**data, "updated_at": now_iso()}})
     return await db.products.find_one({"id": pid}, {"_id": 0})
@@ -494,6 +514,29 @@ SEED_PRODUCTS = [
 ]
 
 
+GARMENT_SPECS = [{"key": "fabric", "label": "Kumaş"}, {"key": "weight", "label": "Gramaj"}]
+GARMENT_I18N = {"ru": {"fabric": "Ткань", "weight": "Плотность"}, "uz": {"fabric": "Mato", "weight": "Zichlik"}}
+
+
+async def migrate_specs():
+    async for c in db.categories.find({"spec_fields": {"$exists": False}}, {"_id": 0}):
+        i18n = c.get("i18n") or {}
+        for lang in ("ru", "uz"):
+            i18n.setdefault(lang, {})["spec_labels"] = GARMENT_I18N[lang]
+        await db.categories.update_one({"id": c["id"]}, {"$set": {
+            "spec_fields": GARMENT_SPECS, "spec_labels": {f["key"]: f["label"] for f in GARMENT_SPECS},
+            "default_sizes": ["S", "M", "L", "XL", "XXL"], "i18n": i18n}})
+    async for p in db.products.find({"specs": {"$exists": False}}, {"_id": 0}):
+        specs = {k: p[k] for k in ("fabric", "weight") if p.get(k)}
+        i18n = p.get("i18n") or {}
+        for lang in ("ru", "uz"):
+            tr = i18n.get(lang) or {}
+            tr_specs = {k: tr[k] for k in ("fabric", "weight") if tr.get(k)}
+            if tr_specs:
+                i18n.setdefault(lang, {})["specs"] = tr_specs
+        await db.products.update_one({"id": p["id"]}, {"$set": {"specs": specs, "i18n": i18n}})
+
+
 async def migrate_order():
     missing = await db.products.find({"order": {"$exists": False}}, {"_id": 0, "id": 1}).sort("created_at", -1).to_list(1000)
     for i, p in enumerate(missing):
@@ -529,6 +572,7 @@ async def startup():
     app.state.index_task = asyncio.create_task(ensure_indexes())
     await seed()
     await migrate_order()
+    await migrate_specs()
     await seed_admin()
 
 

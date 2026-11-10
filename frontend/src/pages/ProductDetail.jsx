@@ -78,8 +78,9 @@ export default function ProductDetail() {
             {p.summary && <p className="mt-6 text-lg text-slate-200">{loc(p, "summary")}</p>}
             {p.description && <p className="mt-4 whitespace-pre-line text-slate-300">{loc(p, "description")}</p>}
             <div className="mt-8">
-              <Spec k={D.fabric} v={loc(p, "fabric")} />
-              <Spec k={D.weight} v={loc(p, "weight")} />
+              {(p.category?.spec_fields || []).map((s) => (
+                <Spec key={s.key} k={loc(p.category, "spec_labels")?.[s.key] || s.label} v={loc(p, "specs")?.[s.key] || p.specs?.[s.key]} />
+              ))}
               <Spec k={D.sizes} v={(p.sizes || []).join(" · ")} />
               <Spec k={D.colors} v={(loc(p, "colors") || []).join(" · ")} />
             </div>

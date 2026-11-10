@@ -50,6 +50,7 @@ User choices: Firma adı "Shabnam elegant"; admin girişi Google ile; fotoğrafl
 
 ## Implemented (2026-11-10)
 - Forgot/reset password by email (link to /admin/sifre-sifirla, 1h single-use hashed token, TTL index, 3 requests/15min per IP, no user enumeration); PUBLIC_SITE_URL env
+- Per-category product attributes: category.spec_fields [{key,label}] + default_sizes + spec_labels (translated); product.specs {key: value} (translated per sub-key); presets Giyim/Ayakkabı/Şapka-Başlık/Eldiven; legacy fabric/weight migrated to specs; shown on detail page + PDF
 
 ## Backlog
 - P1: Email notification on new quote/message; product drag-sort; PDF catalog download
